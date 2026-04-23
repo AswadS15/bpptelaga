@@ -14,13 +14,26 @@ class Lahan extends Model
     protected $fillable = [
         'id_petani',
         'luas',
+        'fase_tanam',
+        'ndvi_skor',
         'koordinat',
+        'titik_koordinat',
     ];
 
-    protected $casts = [
-        'koordinat' => 'array',
-        'luas' => 'decimal:2',
-    ];
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'koordinat'        => 'array',
+            'titik_koordinat'  => 'array',
+            'luas'             => 'decimal:4',
+            'ndvi_skor'        => 'decimal:3',
+        ];
+    }
 
     /**
      * Lahan dimiliki oleh satu Petani (N:1)
