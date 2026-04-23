@@ -21,6 +21,8 @@ Route::get('/login', [LoginController::class, 'index'])->name('login');
 Route::get('/beranda', [BerandaController::class, 'index'])->name('beranda');
 Route::get('/peta', [PetaController::class, 'index'])->name('peta');
 Route::post('/peta', [PetaController::class, 'store'])->name('peta.store');
+Route::put('/peta/{id}', [PetaController::class, 'update'])->name('peta.update');
+Route::delete('/peta/{id}', [PetaController::class, 'destroy'])->name('peta.destroy');
 
 // CRUD Petani
 Route::get('/data-petani', [PetaniController::class, 'index'])->name('data-petani');

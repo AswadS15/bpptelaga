@@ -14,4 +14,8 @@ declare module 'leaflet' {
       const DELETED: string
     }
   }
+
+  namespace GeometryUtil {
+    function geodesicArea(latlngs: LatLng[]): number
+  }
 }

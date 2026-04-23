@@ -15,4 +15,12 @@ export default defineConfig({
             '@': '/resources/js',
         },
     },
+    optimizeDeps: {
+        include: ['react-is', 'recharts'],
+    },
+    server: {
+        watch: {
+            usePolling: true,
+        },
+    },
 });
