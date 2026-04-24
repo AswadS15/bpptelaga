@@ -139,4 +139,19 @@ class LahanController extends Controller
 
         return redirect()->route('data-lahan')->with('sukses', 'Data lahan berhasil dihapus.');
     }
+
+    /**
+     * Menghapus banyak data lahan sekaligus.
+     */
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:tabel_lahan,id_lahan',
+        ]);
+
+        Lahan::whereIn('id_lahan', $validated['ids'])->delete();
+
+        return redirect()->route('data-lahan')->with('sukses', count($validated['ids']) . ' data lahan berhasil dihapus.');
+    }
 }

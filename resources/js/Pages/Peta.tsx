@@ -491,13 +491,13 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
     <div className="flex gap-4 h-full">
       {/* Peta */}
       <div className="flex-1 flex flex-col">
-        <Card className="flex-1 shadow-md border-t-4 border-t-secondary overflow-hidden flex flex-col">
-          <CardHeader className="py-2.5 px-4 bg-slate-50 border-b flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Layers size={18} className="text-secondary" />
+        <Card className="flex-1 glass-card overflow-hidden flex flex-col border-t-2 border-t-violet-500">
+          <CardHeader className="py-2.5 px-4 bg-muted/50 border-b border-border flex flex-row items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2 text-foreground">
+              <Layers size={18} className="text-violet-400" />
               Peta Lahan Pertanian — Kec. Telaga
             </CardTitle>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-muted-foreground">
               {lahanTampil.length}/{dataLahan.length} lahan ditampilkan
             </span>
           </CardHeader>
@@ -541,10 +541,10 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
       {/* Panel Kanan: Klasifikasi */}
       <div className="w-80 flex flex-col gap-3 overflow-auto max-h-[calc(100vh-120px)]">
         {/* Pilih Tipe Klasifikasi */}
-        <Card className="shadow-md">
-          <CardHeader className="py-2.5 px-4 bg-slate-50 border-b">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Filter size={14} className="text-primary" /> Klasifikasi Berdasarkan
+        <Card className="glass-card">
+          <CardHeader className="py-2.5 px-4 bg-muted/50 border-b border-border">
+            <CardTitle className="text-sm flex items-center gap-2 text-foreground">
+              <Filter size={14} className="text-violet-400" /> Klasifikasi Berdasarkan
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2">
@@ -553,10 +553,10 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
                 <button
                   key={kat.key}
                   onClick={() => { setTipeKlasifikasi(kat.key); setFilterNilai(null) }}
-                  className={`px-2.5 py-1.5 text-xs rounded-md transition-all font-medium ${
+                  className={`px-2.5 py-1.5 text-xs rounded-lg transition-all font-medium ${
                     tipeKlasifikasi === kat.key
                       ? 'bg-primary text-white shadow-sm'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground'
                   }`}
                 >
                   {kat.label}
@@ -567,17 +567,17 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
         </Card>
 
         {/* Legenda Warna */}
-        <Card className="shadow-md">
-          <CardHeader className="py-2.5 px-4 bg-slate-50 border-b">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <MapPin size={14} className="text-primary" />
+        <Card className="glass-card">
+          <CardHeader className="py-2.5 px-4 bg-muted/50 border-b border-border">
+            <CardTitle className="text-sm flex items-center gap-2 text-foreground">
+              <MapPin size={14} className="text-violet-400" />
               {KATEGORI_KLASIFIKASI.find(k => k.key === tipeKlasifikasi)?.label}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-2 space-y-1">
             <button
               onClick={() => setFilterNilai(null)}
-              className={`w-full flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors ${!filterNilai ? 'bg-primary text-white' : 'hover:bg-slate-100'}`}
+              className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${!filterNilai ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
             >
               <Eye size={12} /> Tampilkan Semua ({dataLahan.length})
             </button>
@@ -593,7 +593,7 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
                 <button
                   key={nama}
                   onClick={() => setFilterNilai(aktif ? null : nama)}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors ${aktif ? 'font-semibold bg-slate-100' : 'hover:bg-slate-50'}`}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${aktif ? 'font-semibold bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'}`}
                   style={aktif ? { outline: `2px solid ${warna}`, outlineOffset: '1px' } : {}}
                 >
                   <div
@@ -601,7 +601,7 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
                     style={{ backgroundColor: warna, border: `1px solid ${warna}` }}
                   />
                   <span className="flex-1 text-left truncate" title={nama}>{nama}</span>
-                  <span className="text-slate-400 flex-shrink-0">{jumlah}</span>
+                  <span className="text-muted-foreground flex-shrink-0">{jumlah}</span>
                 </button>
               )
             })}
@@ -609,33 +609,33 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
         </Card>
 
         {/* Info Hover */}
-        <Card className="shadow-md">
-          <CardHeader className="py-2.5 px-4 bg-slate-50 border-b">
-            <CardTitle className="text-sm">Detail Lahan</CardTitle>
+        <Card className="glass-card">
+          <CardHeader className="py-2.5 px-4 bg-muted/50 border-b border-border">
+            <CardTitle className="text-sm text-foreground">Detail Lahan</CardTitle>
           </CardHeader>
           <CardContent className="p-3">
             {lahanHover ? (
               <div className="space-y-2.5 text-sm">
                 <div>
-                  <span className="block text-slate-400 text-[10px] uppercase tracking-wider">Pemilik</span>
-                  <span className="font-semibold">{lahanHover.nama_pemilik}</span>
+                  <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">Pemilik</span>
+                  <span className="font-semibold text-foreground">{lahanHover.nama_pemilik}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <span className="block text-slate-400 text-[10px] uppercase tracking-wider">NIK</span>
-                    <span className="font-medium text-xs">{lahanHover.nik_pemilik}</span>
+                    <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">NIK</span>
+                    <span className="font-medium text-xs text-foreground">{lahanHover.nik_pemilik}</span>
                   </div>
                   <div>
-                    <span className="block text-slate-400 text-[10px] uppercase tracking-wider">Luas</span>
-                    <span className="font-medium">{lahanHover.luas} Ha</span>
+                    <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">Luas</span>
+                    <span className="font-medium text-foreground">{lahanHover.luas} Ha</span>
                   </div>
                 </div>
                 <div>
-                  <span className="block text-slate-400 text-[10px] uppercase tracking-wider">Alamat</span>
-                  <span className="font-medium text-xs">{lahanHover.alamat_pemilik}</span>
+                  <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">Alamat</span>
+                  <span className="font-medium text-xs text-foreground">{lahanHover.alamat_pemilik}</span>
                 </div>
                 <div>
-                  <span className="block text-slate-400 text-[10px] uppercase tracking-wider">Komoditas</span>
+                  <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">Komoditas</span>
                   <div className="flex flex-wrap gap-1 mt-0.5">
                     {lahanHover.komoditas.length > 0 ? lahanHover.komoditas.map((k, i) => {
                       const warna = warnaMap.get(k) || ambilWarna(i)
@@ -644,24 +644,24 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
                           {k}
                         </span>
                       )
-                    }) : <span className="text-slate-400 text-xs">-</span>}
+                    }) : <span className="text-muted-foreground text-xs">-</span>}
                   </div>
                 </div>
                 <div>
-                  <span className="block text-slate-400 text-[10px] uppercase tracking-wider">Kelompok Tani</span>
-                  <span className="font-medium text-xs">{lahanHover.kelompok_tani.join(', ') || '-'}</span>
+                  <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">Kelompok Tani</span>
+                  <span className="font-medium text-xs text-foreground">{lahanHover.kelompok_tani.join(', ') || '-'}</span>
                 </div>
                 <div>
-                  <span className="block text-slate-400 text-[10px] uppercase tracking-wider">Desa</span>
-                  <span className="font-medium text-xs">{lahanHover.desa}</span>
+                  <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">Desa</span>
+                  <span className="font-medium text-xs text-foreground">{lahanHover.desa}</span>
                 </div>
-                <div className="pt-2 border-t border-dashed">
+                <div className="pt-2 border-t border-dashed border-border">
                   <div className="flex justify-between items-center">
-                    <span className="text-slate-400 text-[10px] uppercase tracking-wider">Status Satelit</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600">NDVI ACTIVE</span>
+                    <span className="text-muted-foreground text-[10px] uppercase tracking-wider">Status Satelit</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-500/10 text-violet-400">NDVI ACTIVE</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
                        <div 
                          className="h-full transition-all" 
                          style={{ 
@@ -670,16 +670,16 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
                          }} 
                        />
                     </div>
-                    <span className="text-xs font-bold">{lahanHover.ndvi_skor.toFixed(3)}</span>
+                    <span className="text-xs font-bold text-foreground">{lahanHover.ndvi_skor.toFixed(3)}</span>
                   </div>
-                  <div className="mt-1 text-[10px] font-medium text-slate-500">
+                  <div className="mt-1 text-[10px] font-medium text-muted-foreground">
                     Vegetasi: {lahanHover.ndvi_skor > 0.6 ? 'Sangat Lebat' : lahanHover.ndvi_skor > 0.3 ? 'Sedang' : 'Lahan Kosong/Panen'}
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="text-center text-slate-400 py-6 text-xs">
-                <MapPin className="mx-auto mb-2 text-slate-300" size={28} />
+              <div className="text-center text-muted-foreground py-6 text-xs">
+                <MapPin className="mx-auto mb-2 opacity-30" size={28} />
                 Arahkan kursor ke polygon untuk melihat detail.
               </div>
             )}

@@ -72,4 +72,19 @@ class PetaniController extends Controller
 
         return redirect()->route('data-petani')->with('sukses', 'Data petani berhasil dihapus.');
     }
+
+    /**
+     * Menghapus banyak data petani sekaligus.
+     */
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:tabel_petani,id_petani',
+        ]);
+
+        Petani::whereIn('id_petani', $validated['ids'])->delete();
+
+        return redirect()->route('data-petani')->with('sukses', count($validated['ids']) . ' data petani berhasil dihapus.');
+    }
 }

@@ -14,7 +14,7 @@ import {
 } from '@/Components/ui/dialog'
 import {
   Plus, Trash2, Search, Map as MapIcon, Edit,
-  CheckCircle2, X, LandPlot, ChevronDown, ChevronUp,
+  CheckCircle2, X, LandPlot, ChevronDown, ChevronUp, ArrowUpDown,
 } from 'lucide-react'
 import TataLetak from '@/Komponen/TataLetak'
 
@@ -37,6 +37,7 @@ interface LahanType {
   fase_tanam: string
   petani: { id_petani: number; nama: string }
   komoditas: { id_komoditas: number; nama_komoditas: string }[]
+  created_at?: string
 }
 
 interface Props {
@@ -273,12 +274,74 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
     fase_tanam: 'belum_tanam', koordinat: null as any,
   })
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedRows, setSelectedRows] = useState<number[]>([])
+  const [sortConfig, setSortConfig] = useState<{ key: 'pemilik' | 'luas' | 'waktu' | 'komoditas', direction: 'asc' | 'desc' } | null>(null)
 
-  const filteredLahan = useMemo(() =>
-    daftarLahan.filter(l =>
+  const [currentPage, setCurrentPage] = useState(1)
+  const [perPage, setPerPage] = useState(10)
+
+  const filteredLahan = useMemo(() => {
+    let result = daftarLahan.filter(l =>
       l.petani?.nama.toLowerCase().includes(searchTerm.toLowerCase()) ||
       l.komoditas.some(k => k.nama_komoditas.toLowerCase().includes(searchTerm.toLowerCase()))
-    ), [daftarLahan, searchTerm])
+    )
+
+    if (sortConfig !== null) {
+      result.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+        
+        switch(sortConfig.key) {
+          case 'pemilik':
+            aValue = a.petani?.nama || '';
+            bValue = b.petani?.nama || '';
+            break;
+          case 'luas':
+            aValue = Number(a.luas);
+            bValue = Number(b.luas);
+            break;
+          case 'waktu':
+            aValue = a.id_lahan;
+            bValue = b.id_lahan;
+            break;
+          case 'komoditas':
+            aValue = a.komoditas.length > 0 ? a.komoditas[0].nama_komoditas : '';
+            bValue = b.komoditas.length > 0 ? b.komoditas[0].nama_komoditas : '';
+            break;
+          default:
+            return 0;
+        }
+        
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return result;
+  }, [daftarLahan, searchTerm, sortConfig])
+
+  // Reset pagination when filter/sort changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, sortConfig, perPage])
+
+  const paginatedLahan = useMemo(() => {
+    const start = (currentPage - 1) * perPage;
+    return filteredLahan.slice(start, start + perPage);
+  }, [filteredLahan, currentPage, perPage]);
+
+  const requestSort = (key: 'pemilik' | 'luas' | 'waktu' | 'komoditas') => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  }
+
+  const getSortIcon = (key: 'pemilik' | 'luas' | 'waktu' | 'komoditas') => {
+    if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown size={14} className="ml-1 opacity-20" />;
+    return sortConfig.direction === 'asc' ? <ChevronUp size={14} className="ml-1" /> : <ChevronDown size={14} className="ml-1" />;
+  }
 
   const bukaDialogTambah = () => {
     setModeEdit(false); setIdEdit(null)
@@ -328,6 +391,29 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
     if (confirm('Yakin ingin menghapus data lahan ini?')) router.delete(`/data-lahan/${id}`)
   }
 
+  const toggleAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedRows(filteredLahan.map(l => l.id_lahan))
+    } else {
+      setSelectedRows([])
+    }
+  }
+
+  const toggleRow = (id: number) => {
+    setSelectedRows(prev => 
+      prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
+    )
+  }
+
+  const bulkHapus = () => {
+    if (selectedRows.length === 0) return
+    if (confirm(`Yakin ingin menghapus ${selectedRows.length} data lahan yang dipilih?`)) {
+      router.post('/data-lahan/bulk-destroy', { ids: selectedRows }, {
+        onSuccess: () => setSelectedRows([])
+      })
+    }
+  }
+
   const toggleKomoditas = (id: number) =>
     setForm(prev => ({
       ...prev,
@@ -345,11 +431,11 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
         onTutup={handleBatalPeta}
       />
 
-      <Card className="shadow-sm">
+      <Card className="glass-card">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
-            <CardTitle className="text-xl font-bold text-slate-800">Inventaris Lahan Pertanian</CardTitle>
-            <p className="text-sm text-slate-500">Monitoring luas dan komoditas lahan di wilayah BPP Telaga</p>
+            <CardTitle className="text-xl font-bold text-foreground">Inventaris Lahan Pertanian</CardTitle>
+            <p className="text-sm text-muted-foreground">Monitoring luas dan komoditas lahan di wilayah BPP Telaga</p>
           </div>
           <Button onClick={bukaDialogTambah} className="bg-primary hover:bg-primary/90 flex gap-2">
             <Plus size={18} /> Tambah Lahan
@@ -359,34 +445,89 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
         <CardContent>
           <div className="flex items-center gap-4 mb-6">
             <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
               <Input
                 placeholder="Cari pemilik atau komoditas..."
                 className="pl-10" value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="text-sm text-slate-500">
-              Menampilkan <strong>{filteredLahan.length}</strong> dari {daftarLahan.length} lahan
+            
+            <div className="flex items-center gap-2">
+              <select 
+                className="h-10 rounded-md border border-input bg-background pl-3 pr-8 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
+                value={perPage}
+                onChange={(e) => setPerPage(Number(e.target.value))}
+              >
+                <option value={10}>10 Data</option>
+                <option value={30}>30 Data</option>
+                <option value={50}>50 Data</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center gap-4 ml-auto">
+              {selectedRows.length > 0 && (
+                <Button 
+                  variant="destructive" 
+                  size="sm" 
+                  onClick={bulkHapus}
+                  className="animate-in fade-in zoom-in duration-200"
+                >
+                  <Trash2 size={16} className="mr-2" />
+                  Hapus ({selectedRows.length})
+                </Button>
+              )}
+              <div className="text-sm text-muted-foreground">
+                Menampilkan <strong className="text-foreground">{filteredLahan.length}</strong> dari {daftarLahan.length} lahan
+              </div>
             </div>
           </div>
 
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border border-border rounded-xl overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50/50">
-                  <TableHead className="font-semibold">Nama Pemilik</TableHead>
-                  <TableHead className="font-semibold">Komoditas</TableHead>
-                  <TableHead className="font-semibold text-center">Luas (Ha)</TableHead>
-                  <TableHead className="font-semibold">Status Spasial</TableHead>
-                  <TableHead className="font-semibold text-center">Titik Koordinat</TableHead>
-                  <TableHead className="text-right font-semibold">Aksi</TableHead>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-12 text-center">
+                    <input 
+                      type="checkbox" 
+                      className="rounded border-border text-primary focus:ring-primary w-4 h-4 bg-background accent-primary cursor-pointer"
+                      checked={paginatedLahan.length > 0 && selectedRows.length === filteredLahan.length}
+                      onChange={(e) => toggleAll(e.target.checked)}
+                    />
+                  </TableHead>
+                  <TableHead 
+                    className="font-semibold text-foreground cursor-pointer hover:bg-muted/80 transition-colors select-none"
+                    onClick={() => requestSort('pemilik')}
+                  >
+                    <div className="flex items-center">Nama Pemilik {getSortIcon('pemilik')}</div>
+                  </TableHead>
+                  <TableHead 
+                    className="font-semibold text-foreground cursor-pointer hover:bg-muted/80 transition-colors select-none"
+                    onClick={() => requestSort('komoditas')}
+                  >
+                    <div className="flex items-center">Komoditas {getSortIcon('komoditas')}</div>
+                  </TableHead>
+                  <TableHead 
+                    className="font-semibold text-center text-foreground cursor-pointer hover:bg-muted/80 transition-colors select-none"
+                    onClick={() => requestSort('luas')}
+                  >
+                    <div className="flex items-center justify-center">Luas (Ha) {getSortIcon('luas')}</div>
+                  </TableHead>
+                  <TableHead className="font-semibold text-foreground">Status Spasial</TableHead>
+                  <TableHead 
+                    className="font-semibold text-center text-foreground cursor-pointer hover:bg-muted/80 transition-colors select-none"
+                    onClick={() => requestSort('waktu')}
+                  >
+                    <div className="flex items-center justify-center">Waktu {getSortIcon('waktu')}</div>
+                  </TableHead>
+                  <TableHead className="font-semibold text-center text-foreground">Titik Koordinat</TableHead>
+                  <TableHead className="text-right font-semibold text-foreground">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLahan.length === 0 ? (
+                {paginatedLahan.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-slate-400 py-12">
+                    <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
                       <div className="flex flex-col items-center gap-2">
                         <MapIcon size={40} className="opacity-20" />
                         <p>Tidak ada data lahan yang ditemukan.</p>
@@ -394,58 +535,72 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredLahan.map(l => (
+                  paginatedLahan.map(l => (
                     <>
-                      <TableRow key={l.id_lahan} className="hover:bg-slate-50/50 transition-colors">
-                        <TableCell className="font-medium text-slate-900">{l.petani?.nama || '-'}</TableCell>
+                      <TableRow 
+                        key={l.id_lahan} 
+                        className={`transition-colors ${selectedRows.includes(l.id_lahan) ? 'bg-primary/5' : 'hover:bg-accent/50'}`}
+                      >
+                        <TableCell className="text-center">
+                          <input 
+                            type="checkbox" 
+                            className="rounded border-border text-primary focus:ring-primary w-4 h-4 bg-background accent-primary cursor-pointer"
+                            checked={selectedRows.includes(l.id_lahan)}
+                            onChange={() => toggleRow(l.id_lahan)}
+                          />
+                        </TableCell>
+                        <TableCell className="font-medium text-foreground">{l.petani?.nama || '-'}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
                             {l.komoditas.length > 0 ? (
                               l.komoditas.map(k => (
-                                <span key={k.id_komoditas} className="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-medium">
+                                <span key={k.id_komoditas} className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-[10px] font-medium">
                                   {k.nama_komoditas}
                                 </span>
                               ))
                             ) : (
-                              <span className="text-slate-400 text-xs italic">Belum ditentukan</span>
+                              <span className="text-muted-foreground text-xs italic">Belum ditentukan</span>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-center font-semibold text-slate-700">{l.luas}</TableCell>
+                        <TableCell className="text-center font-semibold text-foreground">{l.luas}</TableCell>
                         <TableCell>
                           {l.koordinat ? (
-                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full">
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-full">
                               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                               Terpetakan
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-full">
                               <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                               Non-Spasial
                             </span>
                           )}
                         </TableCell>
+                        <TableCell className="text-center text-muted-foreground text-sm">
+                          {l.created_at ? new Date(l.created_at).toLocaleDateString('id-ID') : 'Baru'}
+                        </TableCell>
                         <TableCell className="text-center">
                           {l.titik_koordinat && l.titik_koordinat.length > 0 ? (
                             <button
                               onClick={() => setExpandedId(expandedId === l.id_lahan ? null : l.id_lahan)}
-                              className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-1 rounded-full hover:bg-blue-100 transition-colors"
+                              className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-1 rounded-full hover:bg-violet-500/20 transition-colors"
                             >
                               {l.titik_koordinat.length} titik
                               {expandedId === l.id_lahan ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
                             </button>
                           ) : (
-                            <span className="text-slate-300 text-[10px]">—</span>
+                            <span className="text-muted-foreground text-[10px]">—</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-1">
                             <Button variant="ghost" size="icon" onClick={() => bukaDialogEdit(l)}
-                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                              className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10">
                               <Edit size={16} />
                             </Button>
                             <Button variant="ghost" size="icon" onClick={() => hapusLahan(l.id_lahan)}
-                              className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50">
+                              className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10">
                               <Trash2 size={16} />
                             </Button>
                           </div>
@@ -454,22 +609,22 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
 
                       {/* Baris expandable: detail tiap titik koordinat */}
                       {expandedId === l.id_lahan && l.titik_koordinat && l.titik_koordinat.length > 0 && (
-                        <TableRow key={`titik-${l.id_lahan}`} className="bg-blue-50/40">
-                          <TableCell colSpan={6} className="py-4 px-6">
-                            <p className="text-[11px] font-semibold text-slate-600 mb-3">
-                              Titik Koordinat Lahan — <span className="text-blue-700">{l.petani?.nama}</span>
+                        <TableRow key={`titik-${l.id_lahan}`} className="bg-accent/30">
+                          <TableCell colSpan={8} className="py-4 px-6">
+                            <p className="text-[11px] font-semibold text-muted-foreground mb-3">
+                              Titik Koordinat Lahan — <span className="text-violet-400">{l.petani?.nama}</span>
                               &nbsp;({l.titik_koordinat.length} titik)
                             </p>
                             <div className="flex flex-wrap gap-2">
                               {l.titik_koordinat.map(t => (
                                 <div key={t.titik}
-                                  className="bg-white border border-blue-100 rounded-lg px-3 py-2 text-[10px] shadow-sm min-w-[130px]">
-                                  <div className="font-bold text-blue-600 mb-1">Titik {t.titik}</div>
-                                  <div className="text-slate-500">
-                                    <span className="font-medium text-slate-700">Lat:</span>&nbsp;{t.lat.toFixed(8)}
+                                  className="bg-card border border-border rounded-lg px-3 py-2 text-[10px] shadow-sm min-w-[130px]">
+                                  <div className="font-bold text-violet-400 mb-1">Titik {t.titik}</div>
+                                  <div className="text-muted-foreground">
+                                    <span className="font-medium text-foreground">Lat:</span>&nbsp;{t.lat.toFixed(8)}
                                   </div>
-                                  <div className="text-slate-500">
-                                    <span className="font-medium text-slate-700">Lng:</span>&nbsp;{t.lng.toFixed(8)}
+                                  <div className="text-muted-foreground">
+                                    <span className="font-medium text-foreground">Lng:</span>&nbsp;{t.lng.toFixed(8)}
                                   </div>
                                 </div>
                               ))}
@@ -483,6 +638,36 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination Controls */}
+          {filteredLahan.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                Menampilkan {(currentPage - 1) * perPage + 1} - {Math.min(currentPage * perPage, filteredLahan.length)} dari {filteredLahan.length} data
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                >
+                  Sebelumnya
+                </Button>
+                <div className="text-sm font-medium px-2">
+                  Halaman {currentPage} dari {Math.ceil(filteredLahan.length / perPage)}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredLahan.length / perPage), prev + 1))}
+                  disabled={currentPage >= Math.ceil(filteredLahan.length / perPage)}
+                >
+                  Selanjutnya
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
 
         {/* Dialog Tambah / Edit */}

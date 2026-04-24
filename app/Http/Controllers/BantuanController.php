@@ -92,4 +92,19 @@ class BantuanController extends Controller
 
         return redirect()->route('data-bantuan')->with('sukses', 'Bantuan berhasil dihapus.');
     }
+
+    /**
+     * Menghapus banyak data bantuan sekaligus.
+     */
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:tabel_bantuan,id_bantuan',
+        ]);
+
+        Bantuan::whereIn('id_bantuan', $validated['ids'])->delete();
+
+        return redirect()->route('data-bantuan')->with('sukses', count($validated['ids']) . ' bantuan berhasil dihapus.');
+    }
 }

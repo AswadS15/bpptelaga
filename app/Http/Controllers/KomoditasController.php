@@ -64,4 +64,19 @@ class KomoditasController extends Controller
 
         return redirect()->route('data-komoditas')->with('sukses', 'Komoditas berhasil dihapus.');
     }
+
+    /**
+     * Menghapus banyak data komoditas sekaligus.
+     */
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:tabel_komoditas,id_komoditas',
+        ]);
+
+        Komoditas::whereIn('id_komoditas', $validated['ids'])->delete();
+
+        return redirect()->route('data-komoditas')->with('sukses', count($validated['ids']) . ' komoditas berhasil dihapus.');
+    }
 }

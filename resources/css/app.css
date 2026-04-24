@@ -4,67 +4,75 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 240 20% 97%;
+    --foreground: 240 10% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 240 10% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 240 10% 10%;
 
-    /* Primary: #124170 */
-    --primary: 210 72% 25%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 258 60% 52%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Secondary: #67C090 */
-    --secondary: 147 43% 58%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 258 20% 92%;
+    --secondary-foreground: 258 40% 30%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 240 10% 94%;
+    --muted-foreground: 240 5% 46%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 258 20% 92%;
+    --accent-foreground: 258 40% 30%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 210 72% 25%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 258 60% 52%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
+
+    --sidebar: 240 20% 97%;
+    --sidebar-foreground: 240 10% 10%;
+    --sidebar-active: 258 60% 52%;
+    --sidebar-active-foreground: 0 0% 100%;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
+    --background: 258 40% 6%;
+    --foreground: 240 10% 90%;
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 258 30% 10%;
+    --card-foreground: 240 10% 90%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 258 30% 10%;
+    --popover-foreground: 240 10% 90%;
 
-    --primary: 210 72% 25%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 258 60% 60%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 147 43% 58%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 258 30% 16%;
+    --secondary-foreground: 258 20% 80%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 258 25% 14%;
+    --muted-foreground: 258 10% 55%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 258 30% 16%;
+    --accent-foreground: 258 20% 80%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 210 72% 25%;
+    --border: 258 20% 16%;
+    --input: 258 20% 16%;
+    --ring: 258 60% 60%;
+
+    --sidebar: 258 40% 5%;
+    --sidebar-foreground: 258 10% 70%;
+    --sidebar-active: 258 60% 60%;
+    --sidebar-active-foreground: 0 0% 100%;
   }
 }
 
@@ -74,7 +82,16 @@
   }
   body {
     @apply bg-background text-foreground;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
+}
+
+/* Theme transition */
+.theme-transition,
+.theme-transition *,
+.theme-transition *::before,
+.theme-transition *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
 }
 
 /* Leaflet specific reset */
@@ -102,4 +119,66 @@
 /* Better leaflet draw toolbar */
 .leaflet-draw-toolbar a {
   background-size: 270px 30px !important;
+}
+
+/* Dark mode leaflet tooltip */
+.dark .leaflet-tooltip-custom {
+  background: rgba(30, 20, 50, 0.95) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+  color: #e2e8f0 !important;
+}
+
+.dark .leaflet-tooltip-custom::before {
+  border-top-color: rgba(30, 20, 50, 0.95) !important;
+}
+
+/* Glass card effect for dark mode */
+.glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dark .glass-card {
+  background: rgba(139, 92, 246, 0.04);
+  border: 1px solid rgba(139, 92, 246, 0.12);
+}
+
+/* Gradient accent cards */
+.gradient-pink {
+  background: linear-gradient(135deg, #f472b6, #f97316);
+}
+.gradient-cyan {
+  background: linear-gradient(135deg, #22d3ee, #3b82f6);
+}
+.gradient-purple {
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+}
+.gradient-green {
+  background: linear-gradient(135deg, #34d399, #059669);
+}
+
+/* Sidebar active gradient */
+.sidebar-active-gradient {
+  background: linear-gradient(135deg, hsl(258, 60%, 52%), hsl(258, 60%, 42%));
+}
+
+.dark .sidebar-active-gradient {
+  background: linear-gradient(135deg, hsl(258, 60%, 50%), hsl(258, 60%, 35%));
+}
+
+/* Scrollbar styling for dark mode */
+.dark ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.dark ::-webkit-scrollbar-track {
+  background: hsl(258, 40%, 6%);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: hsl(258, 30%, 20%);
+  border-radius: 3px;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: hsl(258, 30%, 30%);
 }

@@ -88,4 +88,19 @@ class KelompokTaniController extends Controller
 
         return redirect()->route('data-kelompok-tani')->with('sukses', 'Kelompok tani berhasil dihapus.');
     }
+
+    /**
+     * Menghapus banyak data kelompok tani sekaligus.
+     */
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array|min:1',
+            'ids.*' => 'integer|exists:tabel_kelompok_tani,id_kelompok',
+        ]);
+
+        KelompokTani::whereIn('id_kelompok', $validated['ids'])->delete();
+
+        return redirect()->route('data-kelompok-tani')->with('sukses', count($validated['ids']) . ' kelompok tani berhasil dihapus.');
+    }
 }

@@ -24,8 +24,8 @@ export default function Laporan() {
     return (
         <div className="space-y-6">
             <div className="max-w-2xl">
-                <h1 className="text-2xl font-bold text-slate-800">Pusat Laporan & Ekspor Data</h1>
-                <p className="text-slate-500 mt-2">
+                <h1 className="text-2xl font-bold text-foreground">Pusat Laporan & Ekspor Data</h1>
+                <p className="text-muted-foreground mt-2">
                     Gunakan halaman ini untuk mengunduh data sistem dalam format Excel/CSV untuk keperluan administrasi dan pelaporan offline.
                 </p>
             </div>
