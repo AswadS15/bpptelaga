@@ -9,7 +9,7 @@ import { Button } from '@/Components/ui/button'
 import { Input } from '@/Components/ui/input'
 import { Label } from '@/Components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/Components/ui/dialog'
-import { Layers, Plus, MapPin, Eye, Filter, Edit, Trash2, CheckCircle2, X } from 'lucide-react'
+import Icon from '@/Komponen/Icon'
 import TataLetak from '@/Komponen/TataLetak'
 
 // Fix leaflet default icon
@@ -30,6 +30,35 @@ const PALET_WARNA = [
 
 function ambilWarna(index: number): string {
   return PALET_WARNA[index % PALET_WARNA.length]
+}
+
+// === Token warna Material Design 3 (sesuai Stitch) ===
+const MD3 = {
+  primaryContainer: '#2e7d32',
+  onPrimaryContainer: '#cbffc2',
+  secondaryContainer: '#fcab28',
+  onSecondaryContainer: '#694300',
+}
+
+// Konversi lingkaran menjadi cincin poligon GeoJSON (lng, lat)
+function lingkaranKePoligon(center: { lat: number; lng: number }, radiusMeter: number, titik = 64): number[][] {
+  const coords: number[][] = []
+  const jarakSudut = radiusMeter / 6378137
+  const lat1 = (center.lat * Math.PI) / 180
+  const lon1 = (center.lng * Math.PI) / 180
+  for (let i = 0; i <= titik; i++) {
+    const bearing = (i / titik) * 2 * Math.PI
+    const lat2 = Math.asin(
+      Math.sin(lat1) * Math.cos(jarakSudut) +
+      Math.cos(lat1) * Math.sin(jarakSudut) * Math.cos(bearing)
+    )
+    const lon2 = lon1 + Math.atan2(
+      Math.sin(bearing) * Math.sin(jarakSudut) * Math.cos(lat1),
+      Math.cos(jarakSudut) - Math.sin(lat1) * Math.sin(lat2)
+    )
+    coords.push([(lon2 * 180) / Math.PI, (lat2 * 180) / Math.PI])
+  }
+  return coords
 }
 
 // === Interfaces ===
@@ -69,7 +98,7 @@ const KATEGORI_KLASIFIKASI: { key: TipeKlasifikasi; label: string }[] = [
   { key: 'kelompok_tani', label: 'Kelompok Tani' },
   { key: 'desa', label: 'Desa' },
   { key: 'luas', label: 'Luas Lahan' },
-  { key: 'fase_tanam', label: 'Monitoring Fase Tanam (Satelit)' },
+  { key: 'fase_tanam', label: 'Monitoring Fase' },
 ]
 
 // Ambil nilai unik berdasarkan tipe klasifikasi
@@ -146,8 +175,10 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
   const mapRef = useRef<L.Map | null>(null)
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const polygonLayerRef = useRef<L.LayerGroup>(new L.LayerGroup())
+  const activeDrawRef = useRef<any>(null)
 
   const [lahanHover, setLahanHover] = useState<LahanPeta | null>(null)
+  const lahanHoverLayerRef = useRef<L.Polygon | null>(null)
   const [lahanTerpilih, setLahanTerpilih] = useState<{data: LahanPeta, layer: L.Polygon} | null>(null)
   const lahanTerpilihRef = useRef<LahanPeta | null>(null)
   const lahanLayerRef = useRef<L.Polygon | null>(null)
@@ -238,7 +269,7 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
         (position) => {
           const { latitude, longitude } = position.coords
           map.setView([latitude, longitude], 18)
-          
+
           // Tambahkan marker lokasi pengguna
           L.circleMarker([latitude, longitude], {
             radius: 8,
@@ -255,38 +286,11 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
       )
     }
 
-    // === Leaflet Draw ===
+    // === Leaflet Draw (handler kustom, tanpa toolbar bawaan) ===
     const drawnItems = new L.FeatureGroup()
     map.addLayer(drawnItems)
 
-    const drawControl = new L.Control.Draw({
-      position: 'topright',
-      draw: {
-        polygon: {
-          allowIntersection: false,
-          shapeOptions: { color: '#ffffff', weight: 3, fillOpacity: 0.3, fillColor: '#67C090' },
-        },
-        polyline: false,
-        circle: false,
-        rectangle: false,
-        marker: false,
-        circlemarker: false,
-      },
-      edit: { featureGroup: drawnItems },
-    })
-    map.addControl(drawControl)
-
-    map.on(L.Draw.Event.CREATED, (e: any) => {
-      const layer = e.layer
-      const latlngs = layer.getLatLngs()[0] as L.LatLng[]
-      
-      // Hitung luas otomatis (m2 -> Ha)
-      const areaSqm = L.GeometryUtil.geodesicArea(latlngs)
-      const areaHa = (areaSqm / 10000).toFixed(4)
-
-      const koordinatGeoJSON = latlngs.map(ll => [ll.lng, ll.lat])
-      koordinatGeoJSON.push(koordinatGeoJSON[0])
-
+    const simpanHasilGambar = (koordinatGeoJSON: number[][], areaHa: string) => {
       if (modeEditRef.current && lahanTerpilihRef.current) {
         if (confirm('Simpan lahan dengan bentuk baru ini?\n\nShape lama akan digantikan oleh gambar baru.')) {
           const geoJSON = {
@@ -302,7 +306,6 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
             fase_tanam: lahanData.fase_tanam
           }, {
             onSuccess: () => {
-              // Hapus layer lama dari peta segera
               if (lahanLayerRef.current) {
                 polygonLayerRef.current.removeLayer(lahanLayerRef.current)
                 lahanLayerRef.current = null
@@ -323,7 +326,58 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
         setForm({ id_petani: '', luas: areaHa, komoditas: [], fase_tanam: 'belum_tanam' })
         setDialogBuka(true)
       }
+    }
+
+    map.on(L.Draw.Event.CREATED, (e: any) => {
+      const layer = e.layer
+      const tipe = e.layerType
+
+      if (tipe === 'circle') {
+        const center = layer.getLatLng()
+        const radius = layer.getRadius()
+        const ring = lingkaranKePoligon(center, radius)
+        const areaSqm = Math.PI * radius * radius
+        simpanHasilGambar(ring, (areaSqm / 10000).toFixed(4))
+        return
+      }
+
+      const latlngs = layer.getLatLngs()[0] as L.LatLng[]
+      const areaSqm = L.GeometryUtil.geodesicArea(latlngs)
+      let koordinatGeoJSON = latlngs.map(ll => [ll.lng, ll.lat])
+      const first = koordinatGeoJSON[0]
+      const last = koordinatGeoJSON[koordinatGeoJSON.length - 1]
+      if (first[0] !== last[0] || first[1] !== last[1]) {
+        koordinatGeoJSON = [...koordinatGeoJSON, first]
+      }
+      simpanHasilGambar(koordinatGeoJSON, (areaSqm / 10000).toFixed(4))
     })
+
+    // === Fungsi trigger gambar (dipanggil dari tombol kustom) ===
+    ;(map as any)._mulaiGambar = (bentuk: 'polygon' | 'rectangle' | 'circle') => {
+      if (activeDrawRef.current) {
+        activeDrawRef.current.disable()
+        activeDrawRef.current = null
+      }
+      const opsi: any = {
+        shapeOptions: { color: '#ffffff', weight: 3, fillOpacity: 0.3, fillColor: '#67C090' },
+      }
+      if (bentuk === 'polygon') {
+        activeDrawRef.current = new (L as any).Draw.Polygon(map, { allowIntersection: false, ...opsi })
+      } else if (bentuk === 'rectangle') {
+        activeDrawRef.current = new (L as any).Draw.Rectangle(map, opsi)
+      } else {
+        activeDrawRef.current = new (L as any).Draw.Circle(map, opsi)
+      }
+      activeDrawRef.current.enable()
+    }
+
+    ;(map as any)._batalGambar = () => {
+      if (activeDrawRef.current) {
+        activeDrawRef.current.disable()
+        activeDrawRef.current = null
+      }
+      drawnItems.clearLayers()
+    }
 
     mapRef.current = map
 
@@ -387,11 +441,13 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
         polygon.setStyle({ weight: 4, color: '#000000', fillOpacity: 0.8 })
         polygon.bringToFront()
         setLahanHover(lahan)
+        lahanHoverLayerRef.current = polygon
       })
       polygon.on('mouseout', () => {
         if (modeEditRef.current) return
         polygon.setStyle({ weight: 2, color: '#ffffff', fillOpacity: 0.6 })
         setLahanHover(null)
+        lahanHoverLayerRef.current = null
       })
 
       // Klik poligon untuk aksi (Edit / Hapus)
@@ -424,6 +480,10 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
       onSuccess: () => {
         setDialogBuka(false)
         setKoordinatBaru([])
+        if (activeDrawRef.current) {
+          activeDrawRef.current.disable()
+          activeDrawRef.current = null
+        }
       },
     })
   }
@@ -437,6 +497,14 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
     }))
   }
 
+  const mulaiGambar = (bentuk: 'polygon' | 'rectangle' | 'circle') => {
+    ;(mapRef.current as any)?._mulaiGambar(bentuk)
+  }
+
+  const batalGambar = () => {
+    ;(mapRef.current as any)?._batalGambar()
+  }
+
   // --- Aksi Edit & Hapus Titik (Poligon Existing) ---
   const mulaiEditTitik = () => {
     if (!lahanTerpilih) return
@@ -444,11 +512,11 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
     modeEditRef.current = true
     lahanTerpilihRef.current = lahanTerpilih.data
     lahanLayerRef.current = lahanTerpilih.layer  // simpan referensi layer lama
-    
+
     // Ubah style polygon lama agar transparan (menjadi background/jejak)
     const layer = lahanTerpilih.layer as L.Polygon
     layer.setStyle({ dashArray: '5, 5', fillOpacity: 0.1, opacity: 0.4, color: '#ef4444' })
-    
+
     // Mulai menggambar poligon baru
     const polygonDrawer = new ((L as any).Draw.Polygon)(mapRef.current!, {
       allowIntersection: false,
@@ -487,223 +555,301 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
     }
   }
 
+  const bukaDetailLengkap = () => {
+    if (lahanHover && lahanHoverLayerRef.current) {
+      setLahanTerpilih({ data: lahanHover, layer: lahanHoverLayerRef.current })
+    }
+  }
+
+  const ndviLabel = (skor: number) =>
+    skor > 0.6 ? 'Kondisi vegetasi sangat baik (Hijau Pekat)'
+    : skor > 0.3 ? 'Vegetasi sedang'
+    : 'Lahan kosong / sudah panen'
+
   return (
-    <div className="flex gap-4 h-full">
-      {/* Peta */}
-      <div className="flex-1 flex flex-col">
-        <Card className="flex-1 glass-card overflow-hidden flex flex-col border-t-2 border-t-violet-500">
-          <CardHeader className="py-2.5 px-4 bg-muted/50 border-b border-border flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2 text-foreground">
-              <Layers size={18} className="text-violet-400" />
-              Peta Lahan Pertanian — Kec. Telaga
-            </CardTitle>
-            <span className="text-xs text-muted-foreground">
-              {lahanTampil.length}/{dataLahan.length} lahan ditampilkan
-            </span>
-          </CardHeader>
-          <CardContent className="p-0 flex-1 relative" style={{ minHeight: 550 }}>
-            {modeEditTitik && (
-              <div className="absolute top-0 left-0 right-0 z-[1000] bg-blue-600 text-white px-4 py-3 flex items-center justify-between shadow-md">
-                <div className="flex items-center gap-2 font-medium">
-                  <Edit size={18} />
-                  Gambarlah bentuk lahan yang baru (Selesaikan dengan mengklik titik awal)
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" className="bg-white/10 text-white border-white/20 hover:bg-white/20" onClick={batalEditTitik}>
-                    <X size={14} className="mr-1" /> Batal Menggambar
-                  </Button>
-                </div>
-              </div>
-            )}
-            <div ref={mapContainerRef} className="w-full h-full absolute inset-0" />
-            
-            {/* Tombol GPS Manual */}
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              className="absolute bottom-6 right-6 z-[1000] shadow-lg flex gap-2 border-2 border-white"
-              onClick={() => {
-                if (navigator.geolocation) {
-                  navigator.geolocation.getCurrentPosition((p) => {
-                    const { latitude, longitude } = p.coords
-                    mapRef.current?.setView([latitude, longitude], 18)
-                  })
-                }
-              }}
-            >
-              <MapPin size={16} className="text-blue-600" />
-              Lokasi Saya
-            </Button>
-          </CardContent>
-        </Card>
+    <div className="flex h-full w-full gap-3">
+      {/* Peta (full-bleed) */}
+      <div className="relative flex-1 overflow-hidden rounded-xl border border-outline-variant bg-surface">
+        {modeEditTitik && (
+          <div className="absolute inset-x-0 top-0 z-[1000] flex items-center justify-between bg-primary px-4 py-3 text-primary-foreground shadow-md">
+            <div className="flex items-center gap-2 font-medium">
+              <Icon name="edit" size={18} />
+              Gambarlah bentuk lahan yang baru (Selesaikan dengan mengklik titik awal)
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-white/20 bg-white/10 text-white hover:bg-white/20"
+                onClick={batalEditTitik}
+              >
+                <Icon name="close" size={14} className="mr-1" /> Batal Menggambar
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <div ref={mapContainerRef} className="absolute inset-0" />
+
+        {/* Klaster alat gambar (atas-kanan) */}
+        <div className="absolute right-3 top-3 z-[1000] flex flex-col gap-1 rounded-xl border border-outline-variant bg-surface-container-lowest p-1 shadow-md">
+          <button
+            type="button"
+            title="Gambar Poligon"
+            onClick={() => mulaiGambar('polygon')}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container"
+          >
+            <Icon name="pentagon" size={20} />
+          </button>
+          <button
+            type="button"
+            title="Gambar Persegi"
+            onClick={() => mulaiGambar('rectangle')}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container"
+          >
+            <Icon name="rectangle" size={20} />
+          </button>
+          <button
+            type="button"
+            title="Gambar Lingkaran"
+            onClick={() => mulaiGambar('circle')}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container"
+          >
+            <Icon name="circle" size={20} />
+          </button>
+          <div className="mx-2 h-px bg-outline-variant" />
+          <button
+            type="button"
+            title="Bersihkan Gambar"
+            onClick={batalGambar}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-on-surface-variant transition-colors hover:bg-surface-container"
+          >
+            <Icon name="delete" size={20} />
+          </button>
+        </div>
+
+        {/* Tombol GPS (bawah-kanan) */}
+        <button
+          type="button"
+          title="Lokasi Saya"
+          onClick={() => {
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition((p) => {
+                const { latitude, longitude } = p.coords
+                mapRef.current?.setView([latitude, longitude], 18)
+              })
+            }
+          }}
+          className="absolute bottom-3 right-3 z-[1000] flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-on-primary shadow-lg transition-transform hover:scale-105 active:scale-95"
+        >
+          <Icon name="my_location" size={22} fill />
+        </button>
+
+        {/* Badge jumlah lahan (bawah-kiri) */}
+        <div className="absolute bottom-3 left-3 z-[1000] rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-1.5 text-xs font-medium text-on-surface shadow-md">
+          {lahanTampil.length}/{dataLahan.length} lahan ditampilkan
+        </div>
       </div>
 
       {/* Panel Kanan: Klasifikasi */}
-      <div className="w-80 flex flex-col gap-3 overflow-auto max-h-[calc(100vh-120px)]">
+      <aside className="flex w-80 flex-col gap-3 overflow-y-auto pr-1">
         {/* Pilih Tipe Klasifikasi */}
-        <Card className="glass-card">
-          <CardHeader className="py-2.5 px-4 bg-muted/50 border-b border-border">
-            <CardTitle className="text-sm flex items-center gap-2 text-foreground">
-              <Filter size={14} className="text-violet-400" /> Klasifikasi Berdasarkan
+        <Card className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+          <CardHeader className="p-0 pb-3">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-on-surface">
+              <Icon name="filter_alt" size={18} className="text-primary" />
+              Klasifikasi Berdasarkan
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-2">
-            <div className="grid grid-cols-2 gap-1.5">
-              {KATEGORI_KLASIFIKASI.map(kat => (
-                <button
-                  key={kat.key}
-                  onClick={() => { setTipeKlasifikasi(kat.key); setFilterNilai(null) }}
-                  className={`px-2.5 py-1.5 text-xs rounded-lg transition-all font-medium ${
-                    tipeKlasifikasi === kat.key
-                      ? 'bg-primary text-white shadow-sm'
-                      : 'bg-muted text-muted-foreground hover:bg-accent hover:text-foreground'
-                  }`}
-                >
-                  {kat.label}
-                </button>
-              ))}
+          <CardContent className="p-0">
+            <div className="grid grid-cols-2 gap-2">
+              {KATEGORI_KLASIFIKASI.map(kat => {
+                const aktif = tipeKlasifikasi === kat.key
+                return (
+                  <button
+                    key={kat.key}
+                    onClick={() => { setTipeKlasifikasi(kat.key); setFilterNilai(null) }}
+                    className={`rounded-lg border px-2.5 py-2 text-center text-xs font-medium transition-all ${
+                      aktif
+                        ? 'border-primary bg-primary text-on-primary'
+                        : 'border-outline-variant text-muted-foreground hover:bg-accent hover:text-foreground'
+                    }`}
+                  >
+                    {kat.label}
+                  </button>
+                )
+              })}
             </div>
           </CardContent>
         </Card>
 
         {/* Legenda Warna */}
-        <Card className="glass-card">
-          <CardHeader className="py-2.5 px-4 bg-muted/50 border-b border-border">
-            <CardTitle className="text-sm flex items-center gap-2 text-foreground">
-              <MapPin size={14} className="text-violet-400" />
+        <Card className="rounded-xl border border-outline-variant bg-surface-container-lowest p-4">
+          <CardHeader className="flex flex-row items-center justify-between p-0 pb-3">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-on-surface">
+              <Icon name="place" size={18} className="text-primary" />
               {KATEGORI_KLASIFIKASI.find(k => k.key === tipeKlasifikasi)?.label}
             </CardTitle>
+            <Icon name="info" size={20} className="text-on-surface-variant" />
           </CardHeader>
-          <CardContent className="p-2 space-y-1">
+          <CardContent className="space-y-1 p-0">
             <button
               onClick={() => setFilterNilai(null)}
-              className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${!filterNilai ? 'bg-primary text-white' : 'text-muted-foreground hover:bg-accent hover:text-foreground'}`}
+              className={`mb-2 flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs transition-colors ${
+                !filterNilai ? 'bg-primary text-on-primary' : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+              }`}
             >
-              <Eye size={12} /> Tampilkan Semua ({dataLahan.length})
+              <Icon name="visibility" size={14} />
+              Tampilkan Semua ({dataLahan.length})
             </button>
 
-            {nilaiUnik.map((nama, idx) => {
-              const warna = warnaMap.get(nama) || '#6b7280'
-              const jumlah = dataLahan.filter(l =>
-                ambilNilaiLahan(l, tipeKlasifikasi).includes(nama)
-              ).length
-              const aktif = filterNilai === nama
+            <ul className="space-y-0.5">
+              {nilaiUnik.map((nama) => {
+                const warna = warnaMap.get(nama) || '#6b7280'
+                const jumlah = dataLahan.filter(l =>
+                  ambilNilaiLahan(l, tipeKlasifikasi).includes(nama)
+                ).length
+                const aktif = filterNilai === nama
 
-              return (
-                <button
-                  key={nama}
-                  onClick={() => setFilterNilai(aktif ? null : nama)}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs transition-colors ${aktif ? 'font-semibold bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'}`}
-                  style={aktif ? { outline: `2px solid ${warna}`, outlineOffset: '1px' } : {}}
-                >
-                  <div
-                    className="w-4 h-4 rounded-sm flex-shrink-0"
-                    style={{ backgroundColor: warna, border: `1px solid ${warna}` }}
-                  />
-                  <span className="flex-1 text-left truncate" title={nama}>{nama}</span>
-                  <span className="text-muted-foreground flex-shrink-0">{jumlah}</span>
-                </button>
-              )
-            })}
+                return (
+                  <li key={nama}>
+                    <button
+                      onClick={() => setFilterNilai(aktif ? null : nama)}
+                      className={`flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-xs transition-colors ${
+                        aktif ? 'bg-accent font-semibold text-foreground' : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground'
+                      }`}
+                      style={aktif ? { outline: `2px solid ${warna}`, outlineOffset: '1px' } : {}}
+                    >
+                      <span className="flex min-w-0 items-center gap-2">
+                        <span
+                          className="h-4 w-4 flex-shrink-0 rounded-sm"
+                          style={{ backgroundColor: warna, border: `1px solid ${warna}` }}
+                        />
+                        <span className="truncate text-left" title={nama}>{nama}</span>
+                      </span>
+                      <span className="flex-shrink-0 text-on-surface-variant">{jumlah}</span>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+
+            <div className="mt-2 border-t border-outline-variant pt-2">
+              <button
+                onClick={() => setFilterNilai(null)}
+                className="flex w-full items-center justify-center gap-1 text-xs font-medium text-primary hover:underline"
+              >
+                Tampilkan Semua
+                <Icon name="chevron_right" size={16} />
+              </button>
+            </div>
           </CardContent>
         </Card>
 
-        {/* Info Hover */}
-        <Card className="glass-card">
-          <CardHeader className="py-2.5 px-4 bg-muted/50 border-b border-border">
-            <CardTitle className="text-sm text-foreground">Detail Lahan</CardTitle>
+        {/* Info Hover / Detail Lahan */}
+        <Card className="rounded-xl border border-outline-variant border-t-4 border-t-primary bg-surface-container-lowest p-4">
+          <CardHeader className="p-0 pb-3">
+            <CardTitle className="text-base font-semibold text-on-surface">
+              {lahanHover ? `Lahan ${lahanHover.komoditas_utama} #L${String(lahanHover.id_lahan).padStart(4, '0')}` : 'Detail Lahan'}
+            </CardTitle>
+            {lahanHover && (
+              <div className="mt-2 flex flex-wrap gap-1">
+                {lahanHover.komoditas.length > 0 ? lahanHover.komoditas.map((k, i) => (
+                  <span
+                    key={i}
+                    className="rounded-full px-2 py-[2px] text-[11px] font-medium"
+                    style={{ backgroundColor: MD3.primaryContainer, color: MD3.onPrimaryContainer }}
+                  >
+                    {k}
+                  </span>
+                )) : (
+                  <span
+                    className="rounded-full px-2 py-[2px] text-[11px] font-medium"
+                    style={{ backgroundColor: MD3.secondaryContainer, color: MD3.onSecondaryContainer }}
+                  >
+                    Belum Ditentukan
+                  </span>
+                )}
+                <span
+                  className="rounded-full px-2 py-[2px] text-[11px] font-medium"
+                  style={{ backgroundColor: MD3.secondaryContainer, color: MD3.onSecondaryContainer }}
+                >
+                  Aktif
+                </span>
+              </div>
+            )}
           </CardHeader>
-          <CardContent className="p-3">
+          <CardContent className="p-0">
             {lahanHover ? (
-              <div className="space-y-2.5 text-sm">
-                <div>
-                  <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">Pemilik</span>
-                  <span className="font-semibold text-foreground">{lahanHover.nama_pemilik}</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">NIK</span>
-                    <span className="font-medium text-xs text-foreground">{lahanHover.nik_pemilik}</span>
+              <div>
+                <div className="divide-y divide-outline-variant">
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-xs font-medium text-on-surface-variant">Pemilik</span>
+                    <span className="text-sm font-semibold text-foreground">{lahanHover.nama_pemilik}</span>
                   </div>
-                  <div>
-                    <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">Luas</span>
-                    <span className="font-medium text-foreground">{lahanHover.luas} Ha</span>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-xs font-medium text-on-surface-variant">NIK</span>
+                    <span className="text-sm text-foreground">{lahanHover.nik_pemilik}</span>
                   </div>
-                </div>
-                <div>
-                  <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">Alamat</span>
-                  <span className="font-medium text-xs text-foreground">{lahanHover.alamat_pemilik}</span>
-                </div>
-                <div>
-                  <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">Komoditas</span>
-                  <div className="flex flex-wrap gap-1 mt-0.5">
-                    {lahanHover.komoditas.length > 0 ? lahanHover.komoditas.map((k, i) => {
-                      const warna = warnaMap.get(k) || ambilWarna(i)
-                      return (
-                        <span key={i} className="px-2 py-0.5 text-[10px] rounded-full text-white" style={{ backgroundColor: warna }}>
-                          {k}
-                        </span>
-                      )
-                    }) : <span className="text-muted-foreground text-xs">-</span>}
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-xs font-medium text-on-surface-variant">Luas</span>
+                    <span className="text-sm font-semibold text-foreground">{lahanHover.luas} Ha</span>
+                  </div>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-xs font-medium text-on-surface-variant">Alamat</span>
+                    <span className="text-sm text-foreground">{lahanHover.alamat_pemilik}</span>
                   </div>
                 </div>
-                <div>
-                  <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">Kelompok Tani</span>
-                  <span className="font-medium text-xs text-foreground">{lahanHover.kelompok_tani.join(', ') || '-'}</span>
-                </div>
-                <div>
-                  <span className="block text-muted-foreground text-[10px] uppercase tracking-wider">Desa</span>
-                  <span className="font-medium text-xs text-foreground">{lahanHover.desa}</span>
-                </div>
-                <div className="pt-2 border-t border-dashed border-border">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground text-[10px] uppercase tracking-wider">Status Satelit</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-violet-500/10 text-violet-400">NDVI ACTIVE</span>
+
+                <div className="mt-4">
+                  <div className="mb-1 flex items-end justify-between">
+                    <span className="text-xs font-bold text-primary">NDVI ACTIVE</span>
+                    <span className="text-[11px] font-bold text-foreground">{lahanHover.ndvi_skor.toFixed(3)}</span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                       <div 
-                         className="h-full transition-all" 
-                         style={{ 
-                           width: `${lahanHover.ndvi_skor * 100}%`,
-                           backgroundColor: lahanHover.ndvi_skor > 0.5 ? '#22c55e' : lahanHover.ndvi_skor > 0.2 ? '#f59e0b' : '#ef4444'
-                         }} 
-                       />
-                    </div>
-                    <span className="text-xs font-bold text-foreground">{lahanHover.ndvi_skor.toFixed(3)}</span>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-surface-container-high">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-red-500 via-yellow-400 to-primary transition-all duration-1000"
+                      style={{ width: `${Math.min(lahanHover.ndvi_skor * 100, 100)}%` }}
+                    />
                   </div>
-                  <div className="mt-1 text-[10px] font-medium text-muted-foreground">
-                    Vegetasi: {lahanHover.ndvi_skor > 0.6 ? 'Sangat Lebat' : lahanHover.ndvi_skor > 0.3 ? 'Sedang' : 'Lahan Kosong/Panen'}
-                  </div>
+                  <p className="mt-1 text-[11px] italic text-on-surface-variant">{ndviLabel(lahanHover.ndvi_skor)}</p>
                 </div>
+
+                <Button
+                  className="mt-4 w-full gap-2 bg-primary text-on-primary hover:bg-primary/90"
+                  onClick={bukaDetailLengkap}
+                >
+                  <Icon name="visibility" size={18} />
+                  Lihat Detail Lengkap
+                </Button>
               </div>
             ) : (
-              <div className="text-center text-muted-foreground py-6 text-xs">
-                <MapPin className="mx-auto mb-2 opacity-30" size={28} />
+              <div className="py-6 text-center text-xs text-muted-foreground">
+                <Icon name="place" className="mx-auto mb-2 opacity-30" size={28} />
                 Arahkan kursor ke polygon untuk melihat detail.
               </div>
             )}
           </CardContent>
         </Card>
-      </div>
+      </aside>
 
       {/* Dialog Form Tambah Lahan */}
       <Dialog open={dialogBuka} onOpenChange={(open) => { setDialogBuka(open); if (!open) setKoordinatBaru([]) }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Plus size={18} /> Tambah Data Lahan Baru
+              <Icon name="add" size={18} /> Tambah Data Lahan Baru
             </DialogTitle>
             <DialogDescription>
               Polygon telah digambar ({koordinatBaru.length > 0 ? koordinatBaru.length - 1 : 0} titik). Lengkapi data atribut di bawah ini.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 mt-2">
+          <div className="mt-2 space-y-4">
             <div>
               <Label>Pemilik Lahan (Petani)</Label>
               <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
+                className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.id_petani}
                 onChange={e => setForm({ ...form, id_petani: e.target.value })}
               >
@@ -728,7 +874,7 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
 
             <div>
               <Label>Komoditas yang Ditanam</Label>
-              <div className="flex flex-wrap gap-2 mt-2">
+              <div className="mt-2 flex flex-wrap gap-2">
                 {daftarKomoditas.map((k, i) => {
                   const warna = ambilWarna(i)
                   return (
@@ -736,10 +882,10 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
                       key={k.id_komoditas}
                       type="button"
                       onClick={() => toggleKomoditas(k.id_komoditas)}
-                      className={`px-3 py-1.5 text-xs rounded-full border transition-all ${
+                      className={`rounded-full border px-3 py-1.5 text-xs transition-all ${
                         form.komoditas.includes(k.id_komoditas)
-                          ? 'text-white border-transparent shadow-sm'
-                          : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
+                          ? 'border-transparent text-white shadow-sm'
+                          : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'
                       }`}
                       style={form.komoditas.includes(k.id_komoditas) ? { backgroundColor: warna } : {}}
                     >
@@ -753,7 +899,7 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
             <div>
               <Label>Fase Tanam Saat Ini</Label>
               <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
+                className="mt-1 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 value={form.fase_tanam}
                 onChange={e => setForm({ ...form, fase_tanam: e.target.value })}
               >
@@ -762,12 +908,12 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
                 <option value="tumbuh_subur">Tumbuh Subur</option>
                 <option value="panen">Sudah Panen</option>
               </select>
-              <p className="text-[10px] text-slate-500 mt-1">* Sistem akan melakukan sinkronisasi citra satelit NDVI otomatis.</p>
+              <p className="mt-1 text-[10px] text-slate-500">* Sistem akan melakukan sinkronisasi citra satelit NDVI otomatis.</p>
             </div>
 
-            <div className="bg-slate-50 rounded-md p-3">
+            <div className="rounded-md bg-slate-50 p-3">
               <Label className="text-xs text-slate-500">Koordinat Polygon (GeoJSON)</Label>
-              <pre className="text-[10px] text-slate-400 mt-1 max-h-20 overflow-auto">
+              <pre className="mt-1 max-h-20 overflow-auto text-[10px] text-slate-400">
                 {JSON.stringify(koordinatBaru.slice(0, 3), null, 1)}
                 {koordinatBaru.length > 3 && `\n... +${koordinatBaru.length - 3} titik lainnya`}
               </pre>
@@ -779,13 +925,14 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
             <Button
               onClick={simpanLahanBaru}
               disabled={!form.id_petani || !form.luas}
-              className="bg-primary"
+              className="bg-primary text-on-primary hover:bg-primary/90"
             >
               Simpan Lahan
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
       {/* Modal Opsi Lahan (Klik Poligon) */}
       <Dialog open={!!lahanTerpilih && !modeEditTitik} onOpenChange={(open) => !open && setLahanTerpilih(null)}>
         <DialogContent className="sm:max-w-md">
@@ -795,26 +942,28 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
               Pilih aksi untuk lahan milik <strong>{lahanTerpilih?.data.nama_pemilik}</strong>
             </DialogDescription>
           </DialogHeader>
-          
+
           {lahanTerpilih && (
             <div className="space-y-4">
-              <div className="bg-slate-50 p-3 rounded-lg border text-sm">
+              <div className="rounded-lg border border-outline-variant bg-surface-container-low p-3 text-sm">
                 <div className="grid grid-cols-2 gap-y-2">
-                  <div className="text-slate-500">Luas:</div>
-                  <div className="font-medium text-right">{lahanTerpilih.data.luas} Ha</div>
-                  <div className="text-slate-500">Komoditas:</div>
-                  <div className="font-medium text-right">{lahanTerpilih.data.komoditas.join(', ') || '-'}</div>
-                  <div className="text-slate-500">Fase Tanam:</div>
-                  <div className="font-medium text-right">{WARNA_FASE[ambilNilaiLahan(lahanTerpilih.data, 'fase_tanam')[0]] ? ambilNilaiLahan(lahanTerpilih.data, 'fase_tanam')[0] : '-'}</div>
+                  <div className="text-on-surface-variant">Luas:</div>
+                  <div className="text-right font-medium">{lahanTerpilih.data.luas} Ha</div>
+                  <div className="text-on-surface-variant">Komoditas:</div>
+                  <div className="text-right font-medium">{lahanTerpilih.data.komoditas.join(', ') || '-'}</div>
+                  <div className="text-on-surface-variant">Fase Tanam:</div>
+                  <div className="text-right font-medium">
+                    {WARNA_FASE[ambilNilaiLahan(lahanTerpilih.data, 'fase_tanam')[0]] ? ambilNilaiLahan(lahanTerpilih.data, 'fase_tanam')[0] : '-'}
+                  </div>
                 </div>
               </div>
-              
+
               <div className="flex gap-3">
-                <Button variant="outline" className="flex-1 gap-2 text-blue-600 border-blue-200 hover:bg-blue-50" onClick={mulaiEditTitik}>
-                  <Edit size={16} /> Edit Poligon
+                <Button variant="outline" className="flex-1 gap-2 border-primary/30 text-primary hover:bg-primary/5" onClick={mulaiEditTitik}>
+                  <Icon name="edit" size={16} /> Edit Poligon
                 </Button>
-                <Button variant="outline" className="flex-1 gap-2 text-red-600 border-red-200 hover:bg-red-50" onClick={hapusLahanExisting}>
-                  <Trash2 size={16} /> Hapus Lahan
+                <Button variant="outline" className="flex-1 gap-2 border-red-200 text-red-600 hover:bg-red-50" onClick={hapusLahanExisting}>
+                  <Icon name="delete" size={16} /> Hapus Lahan
                 </Button>
               </div>
             </div>
@@ -826,4 +975,3 @@ export default function Peta({ dataLahan, daftarPetani, daftarKomoditas }: Props
 }
 
 Peta.layout = (page: React.ReactNode) => <TataLetak>{page}</TataLetak>
-

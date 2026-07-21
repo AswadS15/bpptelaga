@@ -4,18 +4,13 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet-draw'
 import 'leaflet-draw/dist/leaflet.draw.css'
-import { Card, CardContent, CardHeader, CardTitle } from '@/Components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/Components/ui/table'
 import { Button } from '@/Components/ui/button'
 import { Input } from '@/Components/ui/input'
-import { Label } from '@/Components/ui/label'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+  Dialog, DialogContent, DialogTitle,
 } from '@/Components/ui/dialog'
-import {
-  Plus, Trash2, Search, Map as MapIcon, Edit,
-  CheckCircle2, X, LandPlot, ChevronDown, ChevronUp, ArrowUpDown,
-} from 'lucide-react'
+import Icon from '@/Komponen/Icon'
 import TataLetak from '@/Komponen/TataLetak'
 
 delete (L.Icon.Default.prototype as any)._getIconUrl
@@ -25,7 +20,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-/* ─── Types ─────────────────────────────────────────────────────── */
 interface TitikKoordinat { titik: number; lat: number; lng: number }
 
 interface LahanType {
@@ -46,7 +40,6 @@ interface Props {
   daftarKomoditas: { id_komoditas: number; nama_komoditas: string }[]
 }
 
-/* ─── Modal Peta Fullscreen ──────────────────────────────────────── */
 function ModalPeta({
   buka, koordinatAwal, onSelesai, onTutup,
 }: {
@@ -59,8 +52,6 @@ function ModalPeta({
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<L.Map | null>(null)
   const drawnItemsRef = useRef<L.FeatureGroup | null>(null)
-  // Simpan hasil gambar baru. Kalau mode tambah, mulai dari null.
-  // Kalau mode edit, mulai dari koordinatAwal sebagai fallback (jika user tidak menggambar ulang).
   const [drawnGeoJSON, setDrawnGeoJSON] = useState<any>(null)
   const [luasSementara, setLuasSementara] = useState<string>('')
   const [sudahDigambarUlang, setSudahDigambarUlang] = useState(false)
@@ -93,7 +84,6 @@ function ModalPeta({
       drawnItemsRef.current = drawnItems
       drawnItems.addTo(map)
 
-      // Hanya tampilkan kontrol draw (tanpa edit untuk menghindari konflik)
       const drawControl = new L.Control.Draw({
         position: 'topright',
         edit: { featureGroup: drawnItems },
@@ -109,7 +99,6 @@ function ModalPeta({
 
       map.on(L.Draw.Event.CREATED, (e: any) => {
         const layer = e.layer
-        // Hanya simpan hasil gambar terbaru (hapus hasil gambar sebelumnya)
         drawnItems.clearLayers()
         drawnItems.addLayer(layer)
 
@@ -132,8 +121,6 @@ function ModalPeta({
 
       if (koordinatAwal) {
         try {
-          // Tampilkan shape lama sebagai GHOST (referensi, garis putus-putus merah)
-          // TIDAK masukkan ke drawnItems agar user tidak bisa edit mode lama
           const ghostLayer = L.geoJSON(koordinatAwal, {
             style: {
               color: '#ef4444',
@@ -146,7 +133,6 @@ function ModalPeta({
 
           map.fitBounds(ghostLayer.getBounds(), { padding: [40, 40] })
 
-          // Hitung luas awal untuk tampilan info
           const coords = koordinatAwal?.geometry?.coordinates?.[0]
           if (coords) {
             const ll = coords.slice(0, -1).map((c: number[]) => L.latLng(c[1], c[0]))
@@ -154,7 +140,6 @@ function ModalPeta({
             setLuasSementara((areaSqm / 10000).toFixed(4))
           }
 
-          // Auto-aktifkan tool gambar polygon langsung
           setTimeout(() => {
             const polygonDrawer = new ((L as any).Draw.Polygon)(map, {
               allowIntersection: false,
@@ -177,9 +162,6 @@ function ModalPeta({
 
   if (!buka) return null
 
-  // Tentukan apakah tombol simpan bisa diklik:
-  // - Mode tambah: harus ada drawnGeoJSON
-  // - Mode edit: boleh simpan jika sudah digambar ulang
   const bolehSimpan = modeEdit ? sudahDigambarUlang : !!drawnGeoJSON
   const geoJSONUntukSimpan = drawnGeoJSON
 
@@ -187,36 +169,35 @@ function ModalPeta({
     <div className="fixed inset-0 z-[9999] flex flex-col bg-white">
       <div className="flex items-center justify-between px-4 py-3 bg-slate-900 text-white shadow-md">
         <div className="flex items-center gap-2">
-          <MapIcon size={18} className="text-blue-400" />
+          <Icon name="map" size={18} className="text-primary" />
           <span className="font-semibold text-sm">
             {modeEdit ? 'Edit Titik Koordinat Lahan' : 'Gambar Lahan di Peta Satelit'}
           </span>
         </div>
         <div className="flex items-center gap-3">
           {luasSementara && (
-            <span className="text-xs bg-blue-600 px-3 py-1 rounded-full font-medium">
+            <span className="text-xs bg-primary px-3 py-1 rounded-full font-medium">
               Luas: <strong>{luasSementara} Ha</strong>
             </span>
           )}
           <button onClick={onTutup} className="text-slate-400 hover:text-white transition-colors">
-            <X size={20} />
+            <Icon name="close" size={20} />
           </button>
         </div>
       </div>
 
-      {/* Banner petunjuk */}
       {modeEdit ? (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center gap-2">
-          <Edit size={14} className="text-amber-600 shrink-0" />
+          <Icon name="edit" size={14} className="text-amber-600 shrink-0" />
           <p className="text-xs text-amber-800">
             <strong>Mode Edit:</strong> Shape lama ditampilkan sebagai garis putus-putus merah sebagai referensi.
             Gambarlah shape baru di atasnya → klik titik pertama untuk menutup → klik <strong>Simpan</strong>.
           </p>
         </div>
       ) : (
-        <div className="bg-blue-50 border-b border-blue-100 px-4 py-2 flex items-center gap-2">
-          <LandPlot size={14} className="text-blue-600 shrink-0" />
-          <p className="text-xs text-blue-700">
+        <div className="bg-primary/5 border-b border-primary/10 px-4 py-2 flex items-center gap-2">
+          <Icon name="landscape" size={14} className="text-primary shrink-0" />
+          <p className="text-xs text-foreground">
             Klik ikon <strong>poligon</strong> di kanan atas peta → klik titik-titik batas lahan (tidak terbatas) → klik titik pertama untuk menutup poligon.
           </p>
         </div>
@@ -231,7 +212,7 @@ function ModalPeta({
           {modeEdit ? (
             sudahDigambarUlang ? (
               <span className="text-green-600 font-medium flex items-center gap-1">
-                <CheckCircle2 size={14} /> Shape baru siap disimpan — luas <strong>{luasSementara} Ha</strong>
+                <Icon name="check_circle" size={14} /> Shape baru siap disimpan — luas <strong>{luasSementara} Ha</strong>
               </span>
             ) : (
               <span className="text-amber-600 font-medium">
@@ -241,7 +222,7 @@ function ModalPeta({
           ) : (
             drawnGeoJSON ? (
               <span className="text-green-600 font-medium flex items-center gap-1">
-                <CheckCircle2 size={14} /> Poligon tersimpan — luas <strong>{luasSementara} Ha</strong>
+                <Icon name="check_circle" size={14} /> Poligon tersimpan — luas <strong>{luasSementara} Ha</strong>
               </span>
             ) : 'Belum ada poligon yang digambar.'
           )}
@@ -254,7 +235,7 @@ function ModalPeta({
             disabled={!bolehSimpan}
             onClick={() => onSelesai(geoJSONUntukSimpan, luasSementara)}
           >
-            <CheckCircle2 size={16} /> {modeEdit ? 'Simpan Perubahan' : 'Selesai & Simpan Koordinat'}
+            <Icon name="check_circle" size={16} /> {modeEdit ? 'Simpan Perubahan' : 'Selesai & Simpan Koordinat'}
           </Button>
         </div>
       </div>
@@ -262,7 +243,6 @@ function ModalPeta({
   )
 }
 
-/* ─── Halaman Utama ──────────────────────────────────────────────── */
 export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }: Props) {
   const [dialogBuka, setDialogBuka] = useState(false)
   const [modalPetaBuka, setModalPetaBuka] = useState(false)
@@ -290,7 +270,7 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
       result.sort((a, b) => {
         let aValue: any;
         let bValue: any;
-        
+
         switch(sortConfig.key) {
           case 'pemilik':
             aValue = a.petani?.nama || '';
@@ -311,7 +291,7 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
           default:
             return 0;
         }
-        
+
         if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
         if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
@@ -320,7 +300,6 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
     return result;
   }, [daftarLahan, searchTerm, sortConfig])
 
-  // Reset pagination when filter/sort changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, sortConfig, perPage])
@@ -329,6 +308,8 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
     const start = (currentPage - 1) * perPage;
     return filteredLahan.slice(start, start + perPage);
   }, [filteredLahan, currentPage, perPage]);
+
+  const totalPages = Math.ceil(filteredLahan.length / perPage);
 
   const requestSort = (key: 'pemilik' | 'luas' | 'waktu' | 'komoditas') => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -339,8 +320,8 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
   }
 
   const getSortIcon = (key: 'pemilik' | 'luas' | 'waktu' | 'komoditas') => {
-    if (!sortConfig || sortConfig.key !== key) return <ArrowUpDown size={14} className="ml-1 opacity-20" />;
-    return sortConfig.direction === 'asc' ? <ChevronUp size={14} className="ml-1" /> : <ChevronDown size={14} className="ml-1" />;
+    if (!sortConfig || sortConfig.key !== key) return <Icon name="swap_vert" size={14} className="ml-1 opacity-20" />;
+    return sortConfig.direction === 'asc' ? <Icon name="expand_less" size={14} className="ml-1" /> : <Icon name="expand_more" size={14} className="ml-1" />;
   }
 
   const bukaDialogTambah = () => {
@@ -400,7 +381,7 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
   }
 
   const toggleRow = (id: number) => {
-    setSelectedRows(prev => 
+    setSelectedRows(prev =>
       prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]
     )
   }
@@ -422,8 +403,25 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
         : [...prev.komoditas, id],
     }))
 
+  // Pagination page numbers
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = []
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i)
+    } else {
+      pages.push(1)
+      if (currentPage > 3) pages.push('ellipsis')
+      const start = Math.max(2, currentPage - 1)
+      const end = Math.min(totalPages - 1, currentPage + 1)
+      for (let i = start; i <= end; i++) pages.push(i)
+      if (currentPage < totalPages - 2) pages.push('ellipsis')
+      pages.push(totalPages)
+    }
+    return pages
+  }
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <ModalPeta
         buka={modalPetaBuka}
         koordinatAwal={form.koordinat}
@@ -431,326 +429,473 @@ export default function DataLahan({ daftarLahan, daftarPetani, daftarKomoditas }
         onTutup={handleBatalPeta}
       />
 
-      <Card className="glass-card">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <div>
-            <CardTitle className="text-xl font-bold text-foreground">Inventaris Lahan Pertanian</CardTitle>
-            <p className="text-sm text-muted-foreground">Monitoring luas dan komoditas lahan di wilayah BPP Telaga</p>
-          </div>
-          <Button onClick={bukaDialogTambah} className="bg-primary hover:bg-primary/90 flex gap-2">
-            <Plus size={18} /> Tambah Lahan
-          </Button>
-        </CardHeader>
+      {/* Page Header */}
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-3xl font-bold leading-10 tracking-tight text-on-surface">
+            Inventaris Lahan Pertanian
+          </h1>
+          <p className="mt-1 text-base text-on-surface-variant">
+            Kelola data spasial dan informasi komoditas lahan di wilayah BPP Telaga.
+          </p>
+        </div>
+        <button
+          onClick={bukaDialogTambah}
+          className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition-all active:scale-95 hover:bg-primary-container"
+        >
+          <Icon name="add" size={20} />
+          + Tambah Lahan
+        </button>
+      </div>
 
-        <CardContent>
-          <div className="flex items-center gap-4 mb-6">
-            <div className="relative flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+      {/* Table Card */}
+      <div className="overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest">
+        {/* Filter Bar */}
+        <div className="flex items-center justify-between gap-4 border-b border-outline-variant bg-surface-container-low/30 px-4 py-3">
+          <div className="flex items-center gap-4">
+            <div className="relative w-72">
+              <Icon name="search" size={18} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-outline" />
               <Input
                 placeholder="Cari pemilik atau komoditas..."
-                className="pl-10" value={searchTerm}
+                className="h-9 rounded-lg border-outline-variant bg-surface-container-lowest pl-9 text-sm focus:border-primary focus:ring-2 focus:ring-primary"
+                value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             <div className="flex items-center gap-2">
-              <select 
-                className="h-10 rounded-md border border-input bg-background pl-3 pr-8 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
+              <span className="text-xs font-semibold tracking-wide text-outline">Tampilkan</span>
+              <select
+                className="rounded-lg border border-outline-variant bg-surface-container-lowest px-2.5 py-1.5 text-xs font-semibold focus:ring-primary"
                 value={perPage}
                 onChange={(e) => setPerPage(Number(e.target.value))}
               >
-                <option value={10}>10 Data</option>
-                <option value={30}>30 Data</option>
-                <option value={50}>50 Data</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
               </select>
             </div>
-            
-            <div className="flex items-center gap-4 ml-auto">
-              {selectedRows.length > 0 && (
-                <Button 
-                  variant="destructive" 
-                  size="sm" 
-                  onClick={bulkHapus}
-                  className="animate-in fade-in zoom-in duration-200"
-                >
-                  <Trash2 size={16} className="mr-2" />
-                  Hapus ({selectedRows.length})
-                </Button>
-              )}
-              <div className="text-sm text-muted-foreground">
-                Menampilkan <strong className="text-foreground">{filteredLahan.length}</strong> dari {daftarLahan.length} lahan
-              </div>
-            </div>
+
+            {selectedRows.length > 0 && (
+              <button
+                onClick={bulkHapus}
+                className="flex items-center gap-1.5 rounded-lg bg-destructive px-3 py-1.5 text-xs font-semibold text-destructive-foreground transition-colors hover:bg-destructive/90"
+              >
+                <Icon name="delete" size={16} />
+                Hapus ({selectedRows.length})
+              </button>
+            )}
           </div>
 
-          <div className="border border-border rounded-xl overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-12 text-center">
-                    <input 
-                      type="checkbox" 
-                      className="rounded border-border text-primary focus:ring-primary w-4 h-4 bg-background accent-primary cursor-pointer"
-                      checked={paginatedLahan.length > 0 && selectedRows.length === filteredLahan.length}
-                      onChange={(e) => toggleAll(e.target.checked)}
-                    />
-                  </TableHead>
-                  <TableHead 
-                    className="font-semibold text-foreground cursor-pointer hover:bg-muted/80 transition-colors select-none"
-                    onClick={() => requestSort('pemilik')}
-                  >
-                    <div className="flex items-center">Nama Pemilik {getSortIcon('pemilik')}</div>
-                  </TableHead>
-                  <TableHead 
-                    className="font-semibold text-foreground cursor-pointer hover:bg-muted/80 transition-colors select-none"
-                    onClick={() => requestSort('komoditas')}
-                  >
-                    <div className="flex items-center">Komoditas {getSortIcon('komoditas')}</div>
-                  </TableHead>
-                  <TableHead 
-                    className="font-semibold text-center text-foreground cursor-pointer hover:bg-muted/80 transition-colors select-none"
-                    onClick={() => requestSort('luas')}
-                  >
-                    <div className="flex items-center justify-center">Luas (Ha) {getSortIcon('luas')}</div>
-                  </TableHead>
-                  <TableHead className="font-semibold text-foreground">Status Spasial</TableHead>
-                  <TableHead 
-                    className="font-semibold text-center text-foreground cursor-pointer hover:bg-muted/80 transition-colors select-none"
-                    onClick={() => requestSort('waktu')}
-                  >
-                    <div className="flex items-center justify-center">Waktu {getSortIcon('waktu')}</div>
-                  </TableHead>
-                  <TableHead className="font-semibold text-center text-foreground">Titik Koordinat</TableHead>
-                  <TableHead className="text-right font-semibold text-foreground">Aksi</TableHead>
+          <p className="text-xs font-semibold text-on-surface-variant">
+            Menampilkan <span className="font-bold">{filteredLahan.length}</span> dari{' '}
+            <span className="font-bold text-primary">{daftarLahan.length}</span> lahan
+          </p>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-b border-outline-variant bg-surface-container-low">
+                <TableHead className="w-12 p-3">
+                  <input
+                    type="checkbox"
+                    className="rounded border-outline-variant text-primary focus:ring-primary"
+                    checked={paginatedLahan.length > 0 && selectedRows.length === filteredLahan.length}
+                    onChange={(e) => toggleAll(e.target.checked)}
+                  />
+                </TableHead>
+                <TableHead
+                  className="p-3 text-xs font-semibold uppercase tracking-wider text-outline cursor-pointer select-none hover:bg-surface-container transition-colors"
+                  onClick={() => requestSort('pemilik')}
+                >
+                  <div className="flex items-center gap-1">
+                    Nama Pemilik
+                    {getSortIcon('pemilik')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="p-3 text-xs font-semibold uppercase tracking-wider text-outline cursor-pointer select-none hover:bg-surface-container transition-colors"
+                  onClick={() => requestSort('komoditas')}
+                >
+                  <div className="flex items-center gap-1">
+                    Komoditas
+                    {getSortIcon('komoditas')}
+                  </div>
+                </TableHead>
+                <TableHead
+                  className="p-3 text-xs font-semibold uppercase tracking-wider text-outline text-center cursor-pointer select-none hover:bg-surface-container transition-colors"
+                  onClick={() => requestSort('luas')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Luas (Ha)
+                    {getSortIcon('luas')}
+                  </div>
+                </TableHead>
+                <TableHead className="p-3 text-xs font-semibold uppercase tracking-wider text-outline">
+                  Status Spasial
+                </TableHead>
+                <TableHead
+                  className="p-3 text-xs font-semibold uppercase tracking-wider text-outline text-center cursor-pointer select-none hover:bg-surface-container transition-colors"
+                  onClick={() => requestSort('waktu')}
+                >
+                  <div className="flex items-center justify-center gap-1">
+                    Waktu
+                    {getSortIcon('waktu')}
+                  </div>
+                </TableHead>
+                <TableHead className="p-3 text-xs font-semibold uppercase tracking-wider text-outline">
+                  Titik Koordinat
+                </TableHead>
+                <TableHead className="p-3 text-xs font-semibold uppercase tracking-wider text-outline text-right">
+                  Aksi
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedLahan.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="py-16 text-center text-on-surface-variant">
+                    <div className="flex flex-col items-center gap-2">
+                      <Icon name="map" size={40} className="opacity-20" />
+                      <p className="text-sm">Tidak ada data lahan yang ditemukan.</p>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedLahan.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground py-12">
-                      <div className="flex flex-col items-center gap-2">
-                        <MapIcon size={40} className="opacity-20" />
-                        <p>Tidak ada data lahan yang ditemukan.</p>
+              ) : (
+                paginatedLahan.map(l => (
+                  <TableRow
+                    key={l.id_lahan}
+                    className={`border-b border-outline-variant transition-colors ${
+                      selectedRows.includes(l.id_lahan)
+                        ? 'bg-primary/5 border-l-4 border-l-primary'
+                        : 'hover:bg-surface-container-low/50'
+                    }`}
+                  >
+                    <TableCell className="p-3">
+                      <input
+                        type="checkbox"
+                        className="rounded border-outline-variant text-primary focus:ring-primary"
+                        checked={selectedRows.includes(l.id_lahan)}
+                        onChange={() => toggleRow(l.id_lahan)}
+                      />
+                    </TableCell>
+                    <TableCell className="p-3 text-base font-semibold text-on-surface">
+                      {l.petani?.nama || '-'}
+                    </TableCell>
+                    <TableCell className="p-3">
+                      <div className="flex flex-wrap gap-1.5">
+                        {l.komoditas.length > 0 ? (
+                          l.komoditas.map(k => (
+                            <span
+                              key={k.id_komoditas}
+                              className="rounded-full bg-primary-container/20 px-2.5 py-0.5 text-[11px] font-medium text-primary"
+                            >
+                              {k.nama_komoditas}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-xs italic text-outline">Belum ditentukan</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="p-3 text-center text-base font-medium text-on-surface">
+                      {l.luas}
+                    </TableCell>
+                    <TableCell className="p-3">
+                      {l.koordinat ? (
+                        <div className="flex w-fit items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-0.5 text-[11px] font-medium text-green-800">
+                          <div className="h-1.5 w-1.5 rounded-full bg-green-600" />
+                          Terpetakan
+                        </div>
+                      ) : (
+                        <div className="flex w-fit items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-medium text-amber-800">
+                          <div className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                          Non-Spasial
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="p-3 text-center text-sm text-outline">
+                      {l.created_at ? new Date(l.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Baru'}
+                    </TableCell>
+                    <TableCell className="p-3">
+                      {l.titik_koordinat && l.titik_koordinat.length > 0 ? (
+                        <button
+                          onClick={() => setExpandedId(expandedId === l.id_lahan ? null : l.id_lahan)}
+                          className={`flex items-center gap-1 rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-colors ${
+                            expandedId === l.id_lahan
+                              ? 'border-primary/30 bg-primary/10 text-primary'
+                              : 'border-outline-variant text-on-surface-variant hover:bg-surface-container'
+                          }`}
+                        >
+                          <Icon name="pin_drop" size={16} />
+                          {l.titik_koordinat.length} titik
+                        </button>
+                      ) : (
+                        <span className="text-xs italic text-outline">Belum ada titik</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="p-3 text-right">
+                      <div className="flex justify-end gap-0.5">
+                        <button
+                          className="rounded-md p-1.5 text-primary transition-colors hover:bg-primary/10"
+                          title="Edit"
+                          onClick={() => bukaDialogEdit(l)}
+                        >
+                          <Icon name="edit" size={20} />
+                        </button>
+                        <button
+                          className="rounded-md p-1.5 text-error transition-colors hover:bg-error/10"
+                          title="Hapus"
+                          onClick={() => hapusLahan(l.id_lahan)}
+                        >
+                          <Icon name="delete" size={20} />
+                        </button>
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  paginatedLahan.map(l => (
-                    <>
-                      <TableRow 
-                        key={l.id_lahan} 
-                        className={`transition-colors ${selectedRows.includes(l.id_lahan) ? 'bg-primary/5' : 'hover:bg-accent/50'}`}
-                      >
-                        <TableCell className="text-center">
-                          <input 
-                            type="checkbox" 
-                            className="rounded border-border text-primary focus:ring-primary w-4 h-4 bg-background accent-primary cursor-pointer"
-                            checked={selectedRows.includes(l.id_lahan)}
-                            onChange={() => toggleRow(l.id_lahan)}
-                          />
-                        </TableCell>
-                        <TableCell className="font-medium text-foreground">{l.petani?.nama || '-'}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {l.komoditas.length > 0 ? (
-                              l.komoditas.map(k => (
-                                <span key={k.id_komoditas} className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-[10px] font-medium">
-                                  {k.nama_komoditas}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-muted-foreground text-xs italic">Belum ditentukan</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center font-semibold text-foreground">{l.luas}</TableCell>
-                        <TableCell>
-                          {l.koordinat ? (
-                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase text-green-400 bg-green-500/10 border border-green-500/20 px-2 py-1 rounded-full">
-                              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                              Terpetakan
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded-full">
-                              <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                              Non-Spasial
-                            </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center text-muted-foreground text-sm">
-                          {l.created_at ? new Date(l.created_at).toLocaleDateString('id-ID') : 'Baru'}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {l.titik_koordinat && l.titik_koordinat.length > 0 ? (
-                            <button
-                              onClick={() => setExpandedId(expandedId === l.id_lahan ? null : l.id_lahan)}
-                              className="inline-flex items-center gap-1 text-[10px] font-bold text-violet-400 bg-violet-500/10 border border-violet-500/20 px-2 py-1 rounded-full hover:bg-violet-500/20 transition-colors"
-                            >
-                              {l.titik_koordinat.length} titik
-                              {expandedId === l.id_lahan ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
-                            </button>
-                          ) : (
-                            <span className="text-muted-foreground text-[10px]">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => bukaDialogEdit(l)}
-                              className="h-8 w-8 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10">
-                              <Edit size={16} />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => hapusLahan(l.id_lahan)}
-                              className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10">
-                              <Trash2 size={16} />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                ))
+              )}
 
-                      {/* Baris expandable: detail tiap titik koordinat */}
-                      {expandedId === l.id_lahan && l.titik_koordinat && l.titik_koordinat.length > 0 && (
-                        <TableRow key={`titik-${l.id_lahan}`} className="bg-accent/30">
-                          <TableCell colSpan={8} className="py-4 px-6">
-                            <p className="text-[11px] font-semibold text-muted-foreground mb-3">
-                              Titik Koordinat Lahan — <span className="text-violet-400">{l.petani?.nama}</span>
-                              &nbsp;({l.titik_koordinat.length} titik)
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                              {l.titik_koordinat.map(t => (
-                                <div key={t.titik}
-                                  className="bg-card border border-border rounded-lg px-3 py-2 text-[10px] shadow-sm min-w-[130px]">
-                                  <div className="font-bold text-violet-400 mb-1">Titik {t.titik}</div>
-                                  <div className="text-muted-foreground">
-                                    <span className="font-medium text-foreground">Lat:</span>&nbsp;{t.lat.toFixed(8)}
-                                  </div>
-                                  <div className="text-muted-foreground">
-                                    <span className="font-medium text-foreground">Lng:</span>&nbsp;{t.lng.toFixed(8)}
-                                  </div>
-                                </div>
-                              ))}
+              {/* Expanded rows for coordinate details */}
+              {paginatedLahan.map(l =>
+                expandedId === l.id_lahan && l.titik_koordinat && l.titik_koordinat.length > 0 && (
+                  <TableRow key={`exp-${l.id_lahan}`} className="bg-surface-container-lowest/80">
+                    <TableCell colSpan={8} className="p-0">
+                      <div className="border-t border-primary/20 px-6 py-4">
+                        <p className="mb-3 text-[11px] font-semibold text-outline">
+                          Titik Koordinat Lahan —{' '}
+                          <span className="text-primary">{l.petani?.nama}</span>
+                          &nbsp;({l.titik_koordinat.length} titik)
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {l.titik_koordinat.map(t => (
+                            <div
+                              key={t.titik}
+                              className="min-w-[140px] rounded-lg border border-outline-variant bg-surface-container-lowest px-3 py-2 text-xs"
+                            >
+                              <div className="mb-1 font-bold text-primary">Titik {t.titik}</div>
+                              <div className="text-on-surface-variant">
+                                <span className="font-medium text-on-surface">Lat:</span>&nbsp;{t.lat.toFixed(8)}
+                              </div>
+                              <div className="text-on-surface-variant">
+                                <span className="font-medium text-on-surface">Lng:</span>&nbsp;{t.lng.toFixed(8)}
+                              </div>
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </>
-                  ))
+                          ))}
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination */}
+        {filteredLahan.length > 0 && (
+          <div className="flex items-center justify-between border-t border-outline-variant bg-surface-container-low/30 px-4 py-3">
+            <p className="text-xs text-on-surface-variant">
+              Menampilkan {(currentPage - 1) * perPage + 1} - {Math.min(currentPage * perPage, filteredLahan.length)} dari {filteredLahan.length} data
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 text-xs font-semibold text-outline transition-colors hover:bg-surface-container disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <Icon name="chevron_left" size={18} />
+                Sebelumnya
+              </button>
+              <div className="flex items-center gap-1">
+                {getPageNumbers().map((page, idx) =>
+                  page === 'ellipsis' ? (
+                    <span key={`e-${idx}`} className="px-1 text-xs text-outline">...</span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition-colors ${
+                        currentPage === page
+                          ? 'bg-primary text-on-primary'
+                          : 'text-on-surface-variant hover:bg-surface-container'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  )
                 )}
-              </TableBody>
-            </Table>
+              </div>
+              <button
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage >= totalPages}
+                className="flex items-center gap-1 rounded-lg border border-outline-variant px-3 py-1.5 text-xs font-semibold text-on-surface-variant transition-colors hover:bg-surface-container disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Selanjutnya
+                <Icon name="chevron_right" size={18} />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Dialog Tambah / Edit */}
+      <Dialog open={dialogBuka} onOpenChange={setDialogBuka}>
+        <DialogContent className="max-w-2xl gap-0 overflow-hidden rounded-xl border-outline-variant bg-surface-container-lowest p-0 shadow-xl sm:rounded-xl">
+          {/* Modal Header */}
+          <div className="flex items-center justify-between border-b border-outline-variant px-6 py-4">
+            <DialogTitle className="text-xl font-bold text-on-surface">
+              {modeEdit ? 'Ubah Data Lahan' : 'Tambah Data Lahan'}
+            </DialogTitle>
+            <button
+              onClick={() => setDialogBuka(false)}
+              className="rounded-full p-1 text-outline transition-colors hover:bg-surface-container"
+            >
+              <Icon name="close" size={24} />
+            </button>
           </div>
 
-          {/* Pagination Controls */}
-          {filteredLahan.length > 0 && (
-            <div className="flex items-center justify-between mt-4">
-              <div className="text-sm text-muted-foreground">
-                Menampilkan {(currentPage - 1) * perPage + 1} - {Math.min(currentPage * perPage, filteredLahan.length)} dari {filteredLahan.length} data
-              </div>
-              <div className="flex items-center gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
+          {/* Modal Body */}
+          <div className="max-h-[716px] space-y-5 overflow-y-auto px-6 py-5">
+            {/* Field: Pemilik */}
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold tracking-wide text-on-surface">
+                Pemilik Lahan
+              </label>
+              <select
+                className="w-full rounded-lg border border-outline-variant bg-surface-container-low p-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+                value={form.id_petani}
+                onChange={e => setForm({ ...form, id_petani: e.target.value })}
+              >
+                <option value="">Pilih nama petani...</option>
+                {daftarPetani.map(p => (
+                  <option key={p.id_petani} value={p.id_petani}>{p.nama}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Field: Peta */}
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold tracking-wide text-on-surface">
+                Batas Spasial Lahan
+              </label>
+              {form.koordinat ? (
+                <button
+                  type="button"
+                  onClick={bukaPeta}
+                  className="group flex w-full items-center justify-center gap-3 rounded-xl border-2 border-primary/50 bg-primary/5 px-4 py-6 text-sm font-medium text-primary transition-all hover:bg-primary/10"
                 >
-                  Sebelumnya
-                </Button>
-                <div className="text-sm font-medium px-2">
-                  Halaman {currentPage} dari {Math.ceil(filteredLahan.length / perPage)}
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 transition-colors group-hover:bg-primary/20">
+                    <Icon name="check_circle" size={24} />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-semibold">Poligon tersimpan — Luas: {form.luas} Ha</p>
+                    <p className="mt-0.5 text-xs text-on-surface-variant underline">Klik untuk edit batas lahan</p>
+                  </div>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={bukaPeta}
+                  className="group flex h-48 w-full flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-outline-variant bg-surface-container-low transition-all hover:border-primary hover:bg-surface-container-high"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 transition-colors group-hover:bg-primary/20">
+                    <Icon name="polyline" size={28} className="text-primary" />
+                  </div>
+                  <span className="text-sm font-semibold text-primary">Gambar Lahan di Peta Satelit</span>
+                  <span className="px-6 text-center text-xs text-outline">
+                    Klik untuk membuka GIS Editor dan mulai menentukan batas poligon lahan.
+                  </span>
+                </button>
+              )}
+            </div>
+
+            {/* Grid: Luas + Fase Tanam */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold tracking-wide text-on-surface">
+                  Luas (Ha)
+                </label>
+                <div className="relative">
+                  <Input
+                    type="number"
+                    step="0.0001"
+                    placeholder="0.00"
+                    className="rounded-lg border-outline-variant bg-surface-container-low p-3 pr-10 text-sm focus:border-primary focus:ring-2 focus:ring-primary"
+                    value={form.luas}
+                    onChange={e => setForm({ ...form, luas: e.target.value })}
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-outline">
+                    Ha
+                  </span>
                 </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredLahan.length / perPage), prev + 1))}
-                  disabled={currentPage >= Math.ceil(filteredLahan.length / perPage)}
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold tracking-wide text-on-surface">
+                  Fase Tanam
+                </label>
+                <select
+                  className="w-full rounded-lg border border-outline-variant bg-surface-container-low p-3 text-sm outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary"
+                  value={form.fase_tanam}
+                  onChange={e => setForm({ ...form, fase_tanam: e.target.value })}
                 >
-                  Selanjutnya
-                </Button>
+                  <option value="belum_tanam">Persiapan Lahan</option>
+                  <option value="awal_tanam">Vegetatif</option>
+                  <option value="tumbuh_subur">Generatif</option>
+                  <option value="panen">Panen</option>
+                </select>
               </div>
             </div>
-          )}
-        </CardContent>
 
-        {/* Dialog Tambah / Edit */}
-        <Dialog open={dialogBuka} onOpenChange={setDialogBuka}>
-          <DialogContent className="sm:max-w-[520px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="text-xl">{modeEdit ? 'Ubah Data Lahan' : 'Tambah Data Lahan'}</DialogTitle>
-              <DialogDescription>
-                Lengkapi informasi lahan, lalu gambar poligonnya di peta satelit.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 py-2">
-              <div>
-                <Label htmlFor="pemilik">Pemilik Lahan</Label>
-                <select id="pemilik"
-                  className="w-full flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
-                  value={form.id_petani} onChange={e => setForm({ ...form, id_petani: e.target.value })}>
-                  <option value="">-- Pilih Petani --</option>
-                  {daftarPetani.map(p => <option key={p.id_petani} value={p.id_petani}>{p.nama}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <Label>Titik Koordinat Lahan</Label>
-                <button type="button" onClick={bukaPeta}
-                  className={`mt-1 w-full flex items-center justify-center gap-2 rounded-lg border-2 border-dashed py-4 text-sm font-medium transition-all ${
-                    form.koordinat
-                      ? 'border-green-400 bg-green-50 text-green-700 hover:bg-green-100'
-                      : 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100'
-                  }`}>
-                  <MapIcon size={18} />
-                  {form.koordinat
-                    ? <span>✓ Poligon tersimpan — Luas: <strong>{form.luas} Ha</strong><span className="ml-2 text-xs underline">(klik untuk edit)</span></span>
-                    : 'Gambar Lahan di Peta Satelit'}
-                </button>
-              </div>
-
-              <div>
-                <Label htmlFor="luas">Luas Lahan (Ha)</Label>
-                <Input id="luas" type="number" step="0.0001" className="mt-1" value={form.luas}
-                  onChange={e => setForm({ ...form, luas: e.target.value })}
-                  placeholder="Terisi otomatis saat menggambar" />
-              </div>
-
-              <div>
-                <Label htmlFor="fase">Fase Tanam</Label>
-                <select id="fase"
-                  className="w-full flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm mt-1"
-                  value={form.fase_tanam} onChange={e => setForm({ ...form, fase_tanam: e.target.value })}>
-                  <option value="belum_tanam">Belum Tanam</option>
-                  <option value="awal_tanam">Awal Tanam</option>
-                  <option value="tumbuh_subur">Tumbuh Subur</option>
-                  <option value="panen">Sudah Panen</option>
-                </select>
-              </div>
-
-              <div>
-                <Label>Komoditas</Label>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {daftarKomoditas.map(k => (
-                    <button key={k.id_komoditas} type="button" onClick={() => toggleKomoditas(k.id_komoditas)}
-                      className={`px-3 py-1.5 text-[10px] rounded-full border transition-all ${
-                        form.komoditas.includes(k.id_komoditas)
-                          ? 'bg-primary text-white border-primary shadow-sm'
-                          : 'bg-white text-slate-600 border-slate-300 hover:border-slate-400'
-                      }`}>
+            {/* Field: Komoditas Chips */}
+            <div>
+              <label className="mb-1.5 block text-xs font-semibold tracking-wide text-on-surface">
+                Komoditas Utama
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {daftarKomoditas.map(k => {
+                  const selected = form.komoditas.includes(k.id_komoditas)
+                  return (
+                    <button
+                      key={k.id_komoditas}
+                      type="button"
+                      onClick={() => toggleKomoditas(k.id_komoditas)}
+                      className={`flex items-center gap-1.5 rounded-full border-2 px-4 py-1.5 text-xs font-semibold transition-all ${
+                        selected
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-outline-variant text-on-surface-variant hover:border-primary'
+                      }`}
+                    >
+                      {selected && <Icon name="check_circle" size={18} />}
                       {k.nama_komoditas}
                     </button>
-                  ))}
-                </div>
+                  )
+                })}
               </div>
             </div>
+          </div>
 
-            <DialogFooter className="pt-2">
-              <Button variant="outline" onClick={() => setDialogBuka(false)}>Batal</Button>
-              <Button onClick={simpan} className="bg-primary" disabled={!form.id_petani || !form.luas}>
-                {modeEdit ? 'Simpan Perubahan' : 'Simpan Lahan'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </Card>
+          {/* Modal Footer */}
+          <div className="flex justify-end gap-3 border-t border-outline-variant bg-surface-container-low px-6 py-4">
+            <button
+              onClick={() => setDialogBuka(false)}
+              className="rounded-lg px-5 py-2.5 text-sm font-semibold text-outline transition-colors hover:bg-surface-container-highest"
+            >
+              Batal
+            </button>
+            <button
+              onClick={simpan}
+              disabled={!form.id_petani || !form.luas}
+              className="rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-on-primary shadow-lg shadow-primary/20 transition-all hover:bg-primary-container active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {modeEdit ? 'Simpan Perubahan' : 'Simpan Lahan'}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

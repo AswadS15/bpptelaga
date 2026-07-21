@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Petani extends Model
 {
+    use HasFactory;
+
     protected $table = 'tabel_petani';
+
     protected $primaryKey = 'id_petani';
 
     protected $fillable = [
@@ -33,7 +37,7 @@ class Petani extends Model
     public function kelompokTani(): BelongsToMany
     {
         return $this->belongsToMany(KelompokTani::class, 'tabel_keanggotaan', 'id_petani', 'id_kelompok')
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 
     /**
@@ -42,7 +46,7 @@ class Petani extends Model
     public function bantuan(): BelongsToMany
     {
         return $this->belongsToMany(Bantuan::class, 'tabel_penerima_bantuan', 'id_petani', 'id_bantuan')
-                    ->withPivot('tanggal')
-                    ->withTimestamps();
+            ->withPivot('tanggal')
+            ->withTimestamps();
     }
 }

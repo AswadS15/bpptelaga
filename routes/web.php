@@ -1,21 +1,19 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\LoginController;
+use App\Http\Controllers\BantuanController;
 use App\Http\Controllers\BerandaController;
-use App\Http\Controllers\PetaController;
-use App\Http\Controllers\PetaniController;
-use App\Http\Controllers\LahanController;
 use App\Http\Controllers\KelompokTaniController;
 use App\Http\Controllers\KomoditasController;
-use App\Http\Controllers\BantuanController;
+use App\Http\Controllers\LahanController;
 use App\Http\Controllers\LaporanController;
+use App\Http\Controllers\PetaController;
+use App\Http\Controllers\PetaniController;
+use App\Http\Controllers\ProfileController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect('/beranda');
 });
-
-Route::get('/login', [LoginController::class, 'index'])->name('login');
 
 // Halaman utama
 Route::get('/beranda', [BerandaController::class, 'index'])->name('beranda');
@@ -63,6 +61,13 @@ Route::post('/data-bantuan/bulk-destroy', [BantuanController::class, 'bulkDestro
 Route::get('/laporan', [LaporanController::class, 'index'])->name('laporan');
 Route::get('/laporan/ekspor-petani', [LaporanController::class, 'eksporPetani'])->name('laporan.petani');
 Route::get('/laporan/ekspor-lahan', [LaporanController::class, 'eksporLahan'])->name('laporan.lahan');
+
+// Profil pengguna
+Route::middleware('auth')->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
 
 // Include route bawaan breeze (auth.php)
 require __DIR__.'/auth.php';

@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\Petani;
-use App\Models\KelompokTani;
-use App\Models\Lahan;
-use App\Models\Komoditas;
 use App\Models\Bantuan;
+use App\Models\KelompokTani;
+use App\Models\Komoditas;
+use App\Models\Lahan;
+use App\Models\Petani;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -14,11 +14,41 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // === Komoditas ===
-        $padi = Komoditas::create(['nama_komoditas' => 'Padi Sawah']);
-        $jagung = Komoditas::create(['nama_komoditas' => 'Jagung']);
-        $kedelai = Komoditas::create(['nama_komoditas' => 'Kedelai']);
-        $cabai = Komoditas::create(['nama_komoditas' => 'Cabai Merah']);
-        $tomat = Komoditas::create(['nama_komoditas' => 'Tomat']);
+        $padi = Komoditas::create([
+            'nama_komoditas' => 'Padi Sawah',
+            'kategori' => 'pangan',
+            'icon' => 'agriculture',
+            'masa_tanam_bulan' => 4,
+            'target_produktivitas' => 6.5,
+        ]);
+        $jagung = Komoditas::create([
+            'nama_komoditas' => 'Jagung',
+            'kategori' => 'pangan',
+            'icon' => 'grain',
+            'masa_tanam_bulan' => 4,
+            'target_produktivitas' => 5.0,
+        ]);
+        $kedelai = Komoditas::create([
+            'nama_komoditas' => 'Kedelai',
+            'kategori' => 'palawija',
+            'icon' => 'eco',
+            'masa_tanam_bulan' => 3,
+            'target_produktivitas' => 2.5,
+        ]);
+        $cabai = Komoditas::create([
+            'nama_komoditas' => 'Cabai Merah',
+            'kategori' => 'hortikultura',
+            'icon' => 'local_fire_department',
+            'masa_tanam_bulan' => 4,
+            'target_produktivitas' => 8.0,
+        ]);
+        $tomat = Komoditas::create([
+            'nama_komoditas' => 'Tomat',
+            'kategori' => 'hortikultura',
+            'icon' => 'potted_plant',
+            'masa_tanam_bulan' => 3,
+            'target_produktivitas' => 12.0,
+        ]);
 
         // === Kelompok Tani ===
         $kelompok1 = KelompokTani::create(['nama_kelompok' => 'Tani Makmur', 'desa' => 'Desa Luhu']);

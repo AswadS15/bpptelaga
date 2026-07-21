@@ -45,7 +45,7 @@ class KelompokTaniController extends Controller
             'desa' => $validated['desa'],
         ]);
 
-        if (!empty($validated['anggota'])) {
+        if (! empty($validated['anggota'])) {
             $kelompok->petani()->sync($validated['anggota']);
         }
 
@@ -101,6 +101,6 @@ class KelompokTaniController extends Controller
 
         KelompokTani::whereIn('id_kelompok', $validated['ids'])->delete();
 
-        return redirect()->route('data-kelompok-tani')->with('sukses', count($validated['ids']) . ' kelompok tani berhasil dihapus.');
+        return redirect()->route('data-kelompok-tani')->with('sukses', count($validated['ids']).' kelompok tani berhasil dihapus.');
     }
 }

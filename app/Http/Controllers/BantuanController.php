@@ -44,7 +44,7 @@ class BantuanController extends Controller
             'nama_bantuan' => $validated['nama_bantuan'],
         ]);
 
-        if (!empty($validated['penerima'])) {
+        if (! empty($validated['penerima'])) {
             foreach ($validated['penerima'] as $p) {
                 $bantuan->petani()->attach($p['id_petani'], ['tanggal' => $p['tanggal']]);
             }
@@ -105,6 +105,6 @@ class BantuanController extends Controller
 
         Bantuan::whereIn('id_bantuan', $validated['ids'])->delete();
 
-        return redirect()->route('data-bantuan')->with('sukses', count($validated['ids']) . ' bantuan berhasil dihapus.');
+        return redirect()->route('data-bantuan')->with('sukses', count($validated['ids']).' bantuan berhasil dihapus.');
     }
 }

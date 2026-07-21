@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Bantuan extends Model
 {
     protected $table = 'tabel_bantuan';
+
     protected $primaryKey = 'id_bantuan';
 
     protected $fillable = [
@@ -20,7 +21,7 @@ class Bantuan extends Model
     public function petani(): BelongsToMany
     {
         return $this->belongsToMany(Petani::class, 'tabel_penerima_bantuan', 'id_bantuan', 'id_petani')
-                    ->withPivot('tanggal')
-                    ->withTimestamps();
+            ->withPivot('tanggal')
+            ->withTimestamps();
     }
 }

@@ -4,9 +4,12 @@ import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
-import { FormEventHandler } from 'react';
+import { FormEventHandler, useState } from 'react';
 
 export default function Register() {
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
     const { data, setData, post, processing, errors, reset } = useForm({
         name: '',
         email: '',
@@ -26,96 +29,138 @@ export default function Register() {
         <GuestLayout>
             <Head title="Register" />
 
-            <form onSubmit={submit}>
-                <div>
-                    <InputLabel htmlFor="name" value="Name" />
-
-                    <TextInput
-                        id="name"
-                        name="name"
-                        value={data.name}
-                        className="mt-1 block w-full"
-                        autoComplete="name"
-                        isFocused={true}
-                        onChange={(e) => setData('name', e.target.value)}
-                        required
-                    />
-
-                    <InputError message={errors.name} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="email" value="Email" />
-
-                    <TextInput
-                        id="email"
-                        type="email"
-                        name="email"
-                        value={data.email}
-                        className="mt-1 block w-full"
-                        autoComplete="username"
-                        onChange={(e) => setData('email', e.target.value)}
-                        required
-                    />
-
-                    <InputError message={errors.email} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel htmlFor="password" value="Password" />
-
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        onChange={(e) => setData('password', e.target.value)}
-                        required
-                    />
-
-                    <InputError message={errors.password} className="mt-2" />
-                </div>
-
-                <div className="mt-4">
-                    <InputLabel
-                        htmlFor="password_confirmation"
-                        value="Confirm Password"
-                    />
-
-                    <TextInput
-                        id="password_confirmation"
-                        type="password"
-                        name="password_confirmation"
-                        value={data.password_confirmation}
-                        className="mt-1 block w-full"
-                        autoComplete="new-password"
-                        onChange={(e) =>
-                            setData('password_confirmation', e.target.value)
-                        }
-                        required
-                    />
-
-                    <InputError
-                        message={errors.password_confirmation}
-                        className="mt-2"
-                    />
-                </div>
-
-                <div className="mt-4 flex items-center justify-end">
-                    <Link
-                        href={route('login')}
-                        className="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                    >
-                        Already registered?
-                    </Link>
-
-                    <PrimaryButton className="ms-4" disabled={processing}>
+            <div className="rounded-xl border border-outline-variant bg-surface-container-lowest p-8 shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+                {/* Branding/Icon Section */}
+                <div className="mb-8 flex flex-col items-center">
+                    <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-container">
+                        <span className="material-symbols-outlined text-[32px] text-on-primary-container">
+                            agriculture
+                        </span>
+                    </div>
+                    <h1 className="text-headline-md text-on-surface">
                         Register
-                    </PrimaryButton>
+                    </h1>
+                    <p className="mt-1 text-body-md text-on-surface-variant">
+                        Buat akun baru
+                    </p>
                 </div>
-            </form>
+
+                {/* Form */}
+                <form onSubmit={submit} className="space-y-5">
+                    {/* Full Name */}
+                    <div className="space-y-1.5">
+                        <InputLabel htmlFor="name" value="Nama Lengkap" />
+                        <TextInput
+                            id="name"
+                            name="name"
+                            value={data.name}
+                            placeholder="John Doe"
+                            autoComplete="name"
+                            isFocused={true}
+                            leadingIcon="person"
+                            onChange={(e) => setData('name', e.target.value)}
+                            required
+                        />
+                        <InputError message={errors.name} />
+                    </div>
+
+                    {/* Email */}
+                    <div className="space-y-1.5">
+                        <InputLabel htmlFor="email" value="Email" />
+                        <TextInput
+                            id="email"
+                            type="email"
+                            name="email"
+                            value={data.email}
+                            placeholder="email@agrigis.gov"
+                            autoComplete="username"
+                            leadingIcon="mail"
+                            onChange={(e) => setData('email', e.target.value)}
+                            required
+                        />
+                        <InputError message={errors.email} />
+                    </div>
+
+                    {/* Password */}
+                    <div className="space-y-1.5">
+                        <InputLabel htmlFor="password" value="Kata Sandi" />
+                        <TextInput
+                            id="password"
+                            type={showPassword ? 'text' : 'password'}
+                            name="password"
+                            value={data.password}
+                            placeholder="••••••••"
+                            autoComplete="new-password"
+                            leadingIcon="lock"
+                            trailingIcon={
+                                showPassword ? 'visibility_off' : 'visibility'
+                            }
+                            onTrailingIconClick={() =>
+                                setShowPassword(!showPassword)
+                            }
+                            onChange={(e) =>
+                                setData('password', e.target.value)
+                            }
+                            required
+                        />
+                        <InputError message={errors.password} />
+                    </div>
+
+                    {/* Confirm Password */}
+                    <div className="space-y-1.5">
+                        <InputLabel
+                            htmlFor="password_confirmation"
+                            value="Konfirmasi Kata Sandi"
+                        />
+                        <TextInput
+                            id="password_confirmation"
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            name="password_confirmation"
+                            value={data.password_confirmation}
+                            placeholder="••••••••"
+                            autoComplete="new-password"
+                            leadingIcon="lock_reset"
+                            trailingIcon={
+                                showConfirmPassword
+                                    ? 'visibility_off'
+                                    : 'visibility'
+                            }
+                            onTrailingIconClick={() =>
+                                setShowConfirmPassword(!showConfirmPassword)
+                            }
+                            onChange={(e) =>
+                                setData(
+                                    'password_confirmation',
+                                    e.target.value,
+                                )
+                            }
+                            required
+                        />
+                        <InputError message={errors.password_confirmation} />
+                    </div>
+
+                    {/* Submit */}
+                    <PrimaryButton disabled={processing} className="h-14">
+                        <span>Register</span>
+                        <span className="material-symbols-outlined text-[20px]">
+                            arrow_forward
+                        </span>
+                    </PrimaryButton>
+                </form>
+
+                {/* Footer Link */}
+                <div className="mt-8 border-t border-outline-variant pt-6 text-center">
+                    <p className="text-body-sm text-on-surface-variant">
+                        Sudah punya akun?{' '}
+                        <Link
+                            href={route('login')}
+                            className="ml-1 font-semibold text-primary transition-all hover:underline"
+                        >
+                            Log in
+                        </Link>
+                    </p>
+                </div>
+            </div>
         </GuestLayout>
     );
 }

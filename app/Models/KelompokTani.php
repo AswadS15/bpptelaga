@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class KelompokTani extends Model
 {
     protected $table = 'tabel_kelompok_tani';
+
     protected $primaryKey = 'id_kelompok';
 
     protected $fillable = [
@@ -21,6 +22,6 @@ class KelompokTani extends Model
     public function petani(): BelongsToMany
     {
         return $this->belongsToMany(Petani::class, 'tabel_keanggotaan', 'id_kelompok', 'id_petani')
-                    ->withTimestamps();
+            ->withTimestamps();
     }
 }

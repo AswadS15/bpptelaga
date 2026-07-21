@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Petani;
-use App\Models\Lahan;
+use App\Models\Bantuan;
 use App\Models\KelompokTani;
 use App\Models\Komoditas;
-use App\Models\Bantuan;
+use App\Models\Lahan;
+use App\Models\Petani;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Facades\DB;
 
 class BerandaController extends Controller
 {
@@ -45,13 +45,28 @@ class BerandaController extends Controller
 
         $aktivitasTerbaru = Petani::latest()->take(5)->get(['id_petani', 'nama', 'created_at']);
 
+        // Data spasial lahan untuk peta sebaran di beranda
+        $petaLahan = Lahan::with('komoditas')
+            ->whereNotNull('koordinat')
+            ->get()
+            ->map(function ($lahan) {
+                return [
+                    'id_lahan' => $lahan->id_lahan,
+                    'koordinat' => $lahan->koordinat,
+                    'komoditas_utama' => $lahan->komoditas->first()?->nama_komoditas ?? 'Belum Ditentukan',
+                    'luas' => (float) $lahan->luas,
+                ];
+            })
+            ->values();
+
         return Inertia::render('Beranda', [
             'statistik' => $statistik,
             'aktivitasTerbaru' => $aktivitasTerbaru,
             'charts' => [
                 'luasPerKomoditas' => $luasPerKomoditas,
                 'petaniPerDesa' => $petaniPerDesa,
-            ]
+            ],
+            'petaLahan' => $petaLahan,
         ]);
     }
 }

@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use Carbon\Carbon;
+use Faker\Factory as Faker;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use Faker\Factory as Faker;
-use Carbon\Carbon;
 
 class LargeDummyDataSeeder extends Seeder
 {
@@ -14,7 +14,7 @@ class LargeDummyDataSeeder extends Seeder
         $faker = Faker::create('id_ID');
         $now = Carbon::now();
         $chunkSize = 500;
-        
+
         $this->command->info('Mulai generate 1000 data Petani...');
         $petaniData = [];
         for ($i = 0; $i < 1000; $i++) {
@@ -32,13 +32,15 @@ class LargeDummyDataSeeder extends Seeder
             DB::table('tabel_petani')->insertOrIgnore($chunk);
         }
         $petaniIds = DB::table('tabel_petani')->pluck('id_petani')->toArray();
-        if (empty($petaniIds)) return;
-        
+        if (empty($petaniIds)) {
+            return;
+        }
+
         $this->command->info('Mulai generate 1000 data Kelompok Tani...');
         $kelompokData = [];
         for ($i = 0; $i < 1000; $i++) {
             $kelompokData[] = [
-                'nama_kelompok' => 'Kelompok Tani ' . $faker->company . ' ' . $i,
+                'nama_kelompok' => 'Kelompok Tani '.$faker->company.' '.$i,
                 'desa' => $faker->city,
                 'created_at' => $now,
                 'updated_at' => $now,
@@ -50,10 +52,16 @@ class LargeDummyDataSeeder extends Seeder
         $kelompokIds = DB::table('tabel_kelompok_tani')->pluck('id_kelompok')->toArray();
 
         $this->command->info('Mulai generate 1000 data Komoditas...');
+        $kategoriList = ['pangan', 'palawija', 'hortikultura', 'perkebunan'];
+        $ikonList = ['eco', 'grass', 'nature', 'potted_plant'];
         $komoditasData = [];
         for ($i = 0; $i < 1000; $i++) {
             $komoditasData[] = [
-                'nama_komoditas' => 'Komoditas ' . str_pad((string)$i, 4, '0', STR_PAD_LEFT),
+                'nama_komoditas' => 'Komoditas '.str_pad((string) $i, 4, '0', STR_PAD_LEFT),
+                'kategori' => $faker->randomElement($kategoriList),
+                'icon' => $faker->randomElement($ikonList),
+                'masa_tanam_bulan' => $faker->numberBetween(2, 12),
+                'target_produktivitas' => $faker->randomFloat(2, 1, 15),
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
@@ -67,7 +75,7 @@ class LargeDummyDataSeeder extends Seeder
         $bantuanData = [];
         for ($i = 0; $i < 1000; $i++) {
             $bantuanData[] = [
-                'nama_bantuan' => 'Program Bantuan ' . str_pad((string)$i, 4, '0', STR_PAD_LEFT),
+                'nama_bantuan' => 'Program Bantuan '.str_pad((string) $i, 4, '0', STR_PAD_LEFT),
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
@@ -142,7 +150,7 @@ class LargeDummyDataSeeder extends Seeder
         foreach (array_chunk($penerimaBantuanData, $chunkSize) as $chunk) {
             DB::table('tabel_penerima_bantuan')->insertOrIgnore($chunk);
         }
-        
+
         $this->command->info('Selesai generate 1000 data dummy!');
     }
 }

@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -11,11 +9,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tabel_lahan', function (Blueprint $table) {
-            $table->string('fase_tanam')->default('belum_tanam')->after('luas');
-            // Menambahkan kolom untuk menyimpan nilai NDVI terakhir (simulasi hasil analisis satelit)
-            $table->decimal('ndvi_skor', 4, 3)->nullable()->after('fase_tanam');
-        });
+        // Kolom fase_tanam & ndvi_skor sudah ditambahkan pada migration
+        // 2026_04_23_010004_create_tabel_lahan_table agar urutan pembuatan tabel benar.
     }
 
     /**
@@ -23,8 +18,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tabel_lahan', function (Blueprint $table) {
-            $table->dropColumn(['fase_tanam', 'ndvi_skor']);
-        });
+        //
     }
 };

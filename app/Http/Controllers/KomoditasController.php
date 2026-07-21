@@ -31,6 +31,10 @@ class KomoditasController extends Controller
     {
         $validated = $request->validate([
             'nama_komoditas' => 'required|string|max:255|unique:tabel_komoditas,nama_komoditas',
+            'kategori' => 'nullable|string|max:100',
+            'icon' => 'nullable|string|max:50',
+            'masa_tanam_bulan' => 'nullable|integer|min:1|max:12',
+            'target_produktivitas' => 'nullable|numeric|min:0|max:999999.99',
         ]);
 
         Komoditas::create($validated);
@@ -38,15 +42,16 @@ class KomoditasController extends Controller
         return redirect()->route('data-komoditas')->with('sukses', 'Komoditas berhasil ditambahkan.');
     }
 
-    /**
-     * Memperbarui komoditas.
-     */
     public function update(Request $request, int $id): RedirectResponse
     {
         $komoditas = Komoditas::findOrFail($id);
 
         $validated = $request->validate([
-            'nama_komoditas' => 'required|string|max:255|unique:tabel_komoditas,nama_komoditas,' . $id . ',id_komoditas',
+            'nama_komoditas' => 'required|string|max:255|unique:tabel_komoditas,nama_komoditas,'.$id.',id_komoditas',
+            'kategori' => 'nullable|string|max:100',
+            'icon' => 'nullable|string|max:50',
+            'masa_tanam_bulan' => 'nullable|integer|min:1|max:12',
+            'target_produktivitas' => 'nullable|numeric|min:0|max:999999.99',
         ]);
 
         $komoditas->update($validated);
@@ -77,6 +82,6 @@ class KomoditasController extends Controller
 
         Komoditas::whereIn('id_komoditas', $validated['ids'])->delete();
 
-        return redirect()->route('data-komoditas')->with('sukses', count($validated['ids']) . ' komoditas berhasil dihapus.');
+        return redirect()->route('data-komoditas')->with('sukses', count($validated['ids']).' komoditas berhasil dihapus.');
     }
 }

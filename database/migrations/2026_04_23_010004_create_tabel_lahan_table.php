@@ -12,6 +12,8 @@ return new class extends Migration
             $table->id('id_lahan');
             $table->unsignedBigInteger('id_petani');
             $table->decimal('luas', 10, 2);
+            $table->string('fase_tanam')->default('belum_tanam');
+            $table->decimal('ndvi_skor', 4, 3)->nullable();
             $table->json('koordinat')->nullable(); // GeoJSON
             $table->foreign('id_petani')->references('id_petani')->on('tabel_petani')->onDelete('cascade');
             $table->timestamps();

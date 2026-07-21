@@ -50,7 +50,7 @@ class PetaniController extends Controller
         $petani = Petani::findOrFail($id);
 
         $validated = $request->validate([
-            'nik' => 'required|string|size:16|unique:tabel_petani,nik,' . $id . ',id_petani',
+            'nik' => 'required|string|size:16|unique:tabel_petani,nik,'.$id.',id_petani',
             'nama' => 'required|string|max:255',
             'jenis_kelamin' => 'required|in:L,P',
             'no_hp' => 'nullable|string|max:15',
@@ -85,6 +85,6 @@ class PetaniController extends Controller
 
         Petani::whereIn('id_petani', $validated['ids'])->delete();
 
-        return redirect()->route('data-petani')->with('sukses', count($validated['ids']) . ' data petani berhasil dihapus.');
+        return redirect()->route('data-petani')->with('sukses', count($validated['ids']).' data petani berhasil dihapus.');
     }
 }

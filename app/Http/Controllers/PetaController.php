@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Komoditas;
 use App\Models\Lahan;
 use App\Models\Petani;
-use App\Models\Komoditas;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -18,14 +18,18 @@ class PetaController extends Controller
      */
     private function ekstrakTitik(?array $geoJSON): ?array
     {
-        if (!$geoJSON) return null;
+        if (! $geoJSON) {
+            return null;
+        }
 
         // Dukung format Feature maupun Geometry langsung
         $coords = $geoJSON['geometry']['coordinates'][0]
             ?? $geoJSON['coordinates'][0]
             ?? null;
 
-        if (!$coords || !is_array($coords)) return null;
+        if (! $coords || ! is_array($coords)) {
+            return null;
+        }
 
         // Poligon GeoJSON menutup dirinya sendiri (titik pertama = titik terakhir)
         // Buang titik penutup jika sama dengan titik pertama
@@ -38,13 +42,14 @@ class PetaController extends Controller
             }
             $titikList[] = [
                 'titik' => $i + 1,
-                'lat'   => round((float) $c[1], 8),
-                'lng'   => round((float) $c[0], 8),
+                'lat' => round((float) $c[1], 8),
+                'lng' => round((float) $c[0], 8),
             ];
         }
 
         return $titikList ?: null;
     }
+
     /**
      * tampilkanPeta - Menampilkan halaman peta interaktif dengan data GeoJSON.
      */
@@ -55,6 +60,7 @@ class PetaController extends Controller
             ->get()
             ->map(function ($lahan) {
                 $kelompok = $lahan->petani?->kelompokTani ?? collect();
+
                 return [
                     'id_lahan' => $lahan->id_lahan,
                     'luas' => $lahan->luas,
@@ -98,7 +104,7 @@ class PetaController extends Controller
         ]);
 
         // Simulasi analisis satelit (NDVI) berdasarkan fase tanam
-        $ndvi = match($request->fase_tanam) {
+        $ndvi = match ($request->fase_tanam) {
             'belum_tanam' => rand(50, 150) / 1000, // 0.05 - 0.15
             'awal_tanam' => rand(200, 400) / 1000,  // 0.20 - 0.40
             'tumbuh_subur' => rand(600, 900) / 1000, // 0.60 - 0.90
@@ -117,7 +123,7 @@ class PetaController extends Controller
             'ndvi_skor' => $ndvi,
         ]);
 
-        if (!empty($validated['komoditas'])) {
+        if (! empty($validated['komoditas'])) {
             $lahan->komoditas()->sync($validated['komoditas']);
         }
 
@@ -132,10 +138,10 @@ class PetaController extends Controller
         $lahan = Lahan::findOrFail($id);
 
         $validated = $request->validate([
-            'id_petani'  => 'required|exists:tabel_petani,id_petani',
-            'luas'       => 'required|numeric|min:0.0001',
-            'koordinat'  => 'nullable|array',
-            'komoditas'  => 'nullable|array',
+            'id_petani' => 'required|exists:tabel_petani,id_petani',
+            'luas' => 'required|numeric|min:0.0001',
+            'koordinat' => 'nullable|array',
+            'komoditas' => 'nullable|array',
             'komoditas.*' => 'exists:tabel_komoditas,id_komoditas',
             'fase_tanam' => 'nullable|string',
         ]);
@@ -143,11 +149,11 @@ class PetaController extends Controller
         $koordinat = $validated['koordinat'] ?? $lahan->koordinat;
 
         $lahan->update([
-            'luas'            => $validated['luas'],
-            'koordinat'       => $koordinat,
+            'luas' => $validated['luas'],
+            'koordinat' => $koordinat,
             'titik_koordinat' => $this->ekstrakTitik(is_array($koordinat) ? $koordinat : null)
                                  ?? $lahan->titik_koordinat,
-            'fase_tanam'      => $validated['fase_tanam'] ?? $lahan->fase_tanam,
+            'fase_tanam' => $validated['fase_tanam'] ?? $lahan->fase_tanam,
         ]);
 
         if (isset($validated['komoditas'])) {
